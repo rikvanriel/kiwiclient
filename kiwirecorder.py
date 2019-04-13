@@ -124,15 +124,16 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _process_audio_samples(self, seq, samples, rssi):
         if self._options.quiet is False:
-          sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
-          sys.stdout.flush()
+            sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
+            sys.stdout.flush()
+
         if self._squelch:
             is_open = self._squelch.process(seq, rssi)
             if not is_open:
                 self._start_ts = None
                 self._start_time = None
                 return
-
+        
         if self._options.resample > 0:
             if HAS_RESAMPLER:
                 ## libsamplerate resampling
@@ -155,12 +156,14 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 self._start_ts = None
                 self._start_time = None
                 return
+
         ##print gps['gpsnsec']-self._last_gps['gpsnsec']
         self._last_gps = gps
         ## convert list of complex numbers into an array
         s = np.zeros(2*len(samples), dtype=np.int16)
         s[0::2] = np.real(samples).astype(np.int16)
         s[1::2] = np.imag(samples).astype(np.int16)
+
         if self._options.resample > 0:
             if HAS_RESAMPLER:
                 ## libsamplerate resampling
@@ -467,6 +470,10 @@ def main():
                       default=False,
                       action='store_true',
                       help='Also process sound data when in waterfall mode')
+    parser.add_option('--S-meter', '--s-meter',
+                      dest='S_meter',
+                      type='int', default=0,
+                      help='Report S-meter(RSSI) value after S_METER number of averages. Does not write wav data to file.')
     parser.add_option('--test-mode',
                       dest='test_mode',
                       default=False,
@@ -486,6 +493,9 @@ def main():
     run_event = threading.Event()
     run_event.set()
 
+    if options.S_meter != 0:
+        options.test_mode = True
+        options.quiet = True
     options.raw = False;
     gopt = options
     multiple_connections,options = options_cross_product(options)

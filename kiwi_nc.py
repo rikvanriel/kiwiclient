@@ -313,6 +313,7 @@ def main():
     run_event.set()
 
     options.raw = True;
+    options.S_meter = False;
     options.is_kiwi_tdoa = False;
     gopt = options
     multiple_connections,options = options_cross_product(options)

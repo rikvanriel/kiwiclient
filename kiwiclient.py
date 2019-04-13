@@ -178,6 +178,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._modulation = None
         self._compression = True
         self._gps_pos = [0,0]
+        self._s_meter_avgs = self._s_meter_cma = 0
+        self._stop = False
 
     def connect(self, host, port):
         self._prepare_stream(host, port, self._type)
@@ -298,11 +300,20 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         data       = body[7:]
         rssi       = 0.1*smeter - 127
         ##logging.info("SND flags %2d seq %6d RSSI %6.1f len %d" % (flags, seq, rssi, len(data)))
+
+        if self._options.S_meter != 0 and self._s_meter_avgs < self._options.S_meter:
+            self._s_meter_cma = (self._s_meter_cma * self._s_meter_avgs) + rssi
+            self._s_meter_avgs += 1
+            self._s_meter_cma /= self._s_meter_avgs
+            if self._s_meter_avgs == self._options.S_meter:
+                print("RSSI: %6.1f" % self._s_meter_cma)
+                self._stop = True
+
         if self._modulation == 'iq':
             gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], struct.unpack('<BBII', buffer(data[0:10]))))
             data = data[10:]
             if self._options.raw is True:
-                self._process_iq_samples_raw_raw(seq, data)
+                self._process_iq_samples_raw(seq, data)
             else:
                 count = len(data) // 2
                 samples = np.ndarray(count, dtype='>h', buffer=data).astype(np.float32)
@@ -398,6 +409,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         
         tlimit = self._options.tlimit
         if tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit:
+            raise KiwiTimeLimitError('time limit reached')
+        
+        if self._stop:
             raise KiwiTimeLimitError('time limit reached')
 
 # EOF

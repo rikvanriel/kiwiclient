@@ -105,6 +105,9 @@ ncomp:
 rx8:
 #	python kiwirecorder.py -s $H,$H,$H,$H,$H,$H,$H,$H -f 1440 -L -5000 -H 5000 --launch-delay=15 --socket-timeout=120 -u krec-RX8
 	python kiwirecorder.py -s $H,$H,$H,$H,$H,$H,$H,$H -f 1440 -L -5000 -H 5000 -u krec-RX8
+s_meter:
+	python kiwirecorder.py -s $(HOST_REAL) -f 1440 -L -5000 -H 5000 --s-meter 10
+	python kiwirecorder.py -s $(HOST_REAL) -f 1440 -m iq -L -5000 -H 5000 --s-meter 10
 
 
 # TDoA debugging
