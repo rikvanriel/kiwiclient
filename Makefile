@@ -108,6 +108,8 @@ rx8:
 s_meter:
 	python kiwirecorder.py -s $(HOST_REAL) -f 1440 -L -5000 -H 5000 --s-meter 10
 	python kiwirecorder.py -s $(HOST_REAL) -f 1440 -m iq -L -5000 -H 5000 --s-meter 10
+nb:
+	python kiwirecorder.py -s $(HOST_REAL) -f 1440 -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
 
 
 # TDoA debugging

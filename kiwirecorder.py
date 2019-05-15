@@ -10,6 +10,7 @@ from traceback import print_exc
 from kiwiclient import KiwiSDRStream
 from kiwiworker import KiwiWorker
 from optparse import OptionParser
+from optparse import OptionGroup
 
 HAS_RESAMPLER = True
 try:
@@ -112,6 +113,14 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self.set_agc(on=True)
         if self._options.compression is False:
             self._set_snd_comp(False)
+        if self._options.nb is True:
+            gate = self._options.nb_gate
+            if gate < 100 or gate > 5000:
+                gate = 100
+            thresh = self._options.nb_thresh
+            if thresh < 0 or thresh > 100:
+                thresh = 50
+            self.set_noise_blanker(gate, thresh);
         self.set_inactivity_timeout(0)
         self._output_sample_rate = self._sample_rate
         if self._options.resample > 0:
@@ -337,18 +346,6 @@ def join_threads(snd, wf):
 
 def main():
     parser = OptionParser()
-    parser.add_option('--log', '--log-level', '--log_level', type='choice',
-                      dest='log_level', default='warn',
-                      choices=['debug', 'info', 'warn', 'error', 'critical'],
-                      help='Log level: debug|info|warn(default)|error|critical')
-    parser.add_option('-q', '--quiet',
-                      dest='quiet',
-                      default=False,
-                      action='store_true',
-                      help='Don\'t print progress messages')
-    parser.add_option('-k', '--socket-timeout', '--socket_timeout',
-                      dest='socket_timeout', type='int', default=10,
-                      help='Timeout(sec) for sockets')
     parser.add_option('-s', '--server-host',
                       dest='server_host', type='string',
                       default='localhost', help='Server host (can be a comma-delimited list)',
@@ -373,38 +370,26 @@ def main():
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
-    parser.add_option('--launch-delay', '--launch_delay',
-                      dest='launch_delay',
-                      type='int', default=0,
-                      help='Delay (secs) in launching multiple connections')
-    parser.add_option('-f', '--freq',
-                      dest='frequency',
-                      type='string', default=1000,
-                      help='Frequency to tune to, in kHz (can be a comma-separated list)',
+    parser.add_option('--station',
+                      dest='station',
+                      type='string', default=None,
+                      help='Station ID to be appended to filename (can be a comma-separated list)',
                       action='callback',
-                      callback_args=(float,),
+                      callback_args=(str,),
                       callback=get_comma_separated_args)
-    parser.add_option('-m', '--modulation',
-                      dest='modulation',
-                      type='string', default='am',
-                      help='Modulation; one of am, lsb, usb, cw, nbfm, iq')
-    parser.add_option('--ncomp', '--no_compression',
-                      dest='compression',
-                      default=True,
-                      action='store_false',
-                      help='Don\'t use audio compression')
-    parser.add_option('--dt-sec',
-                      dest='dt',
-                      type='int', default=0,
-                      help='Start a new file when mod(sec_of_day,dt) == 0')
-    parser.add_option('-L', '--lp-cutoff',
-                      dest='lp_cut',
-                      type='float', default=100,
-                      help='Low-pass cutoff frequency, in Hz')
-    parser.add_option('-H', '--hp-cutoff',
-                      dest='hp_cut',
-                      type='float', default=2600,
-                      help='Low-pass cutoff frequency, in Hz')
+    parser.add_option('--log', '--log-level', '--log_level', type='choice',
+                      dest='log_level', default='warn',
+                      choices=['debug', 'info', 'warn', 'error', 'critical'],
+                      help='Log level: debug|info|warn(default)|error|critical')
+    parser.add_option('-q', '--quiet',
+                      dest='quiet',
+                      default=False,
+                      action='store_true',
+                      help='Don\'t print progress messages')
+    parser.add_option('-d', '--dir',
+                      dest='dir',
+                      type='string', default=None,
+                      help='Optional destination directory for files')
     parser.add_option('--fn', '--filename',
                       dest='filename',
                       type='string', default='',
@@ -412,44 +397,60 @@ def main():
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
-    parser.add_option('--station',
-                      dest='station',
-                      type='string', default=None,
-                      help='Station ID to be appended (can be a comma-separated list)',
-                      action='callback',
-                      callback_args=(str,),
-                      callback=get_comma_separated_args)
-    parser.add_option('-d', '--dir',
-                      dest='dir',
-                      type='string', default=None,
-                      help='Optional destination directory for files')
-    parser.add_option('-w', '--kiwi-wav',
-                      dest='is_kiwi_wav',
-                      default=False,
-                      action='store_true',
-                      help='Use wav file format including KIWI header (GPS time-stamps) only for IQ mode')
-    parser.add_option('-r', '--resample',
-                      dest='resample',
-                      type='int', default=0,
-                      help='Resample output file to new sample rate in Hz. The resampling ratio has to be in the range [1/256,256]')
-    parser.add_option('--kiwi-tdoa',
-                      dest='is_kiwi_tdoa',
-                      default=False,
-                      action='store_true',
-                      help='Used when called by Kiwi TDoA extension')
     parser.add_option('--tlimit', '--time-limit',
                       dest='tlimit',
                       type='float', default=None,
                       help='Record time limit in seconds')
-    parser.add_option('-T', '--squelch-threshold',
+    parser.add_option('--dt-sec',
+                      dest='dt',
+                      type='int', default=0,
+                      help='Start a new file when mod(sec_of_day,dt) == 0')
+    parser.add_option('--launch-delay', '--launch_delay',
+                      dest='launch_delay',
+                      type='int', default=0,
+                      help='Delay (secs) in launching multiple connections')
+    parser.add_option('-k', '--socket-timeout', '--socket_timeout',
+                      dest='socket_timeout', type='int', default=10,
+                      help='Timeout(sec) for sockets')
+
+    group = OptionGroup(parser, "Audio connection options", "")
+    group.add_option('-f', '--freq',
+                      dest='frequency',
+                      type='string', default=1000,
+                      help='Frequency to tune to, in kHz (can be a comma-separated list)',
+                      action='callback',
+                      callback_args=(float,),
+                      callback=get_comma_separated_args)
+    group.add_option('-m', '--modulation',
+                      dest='modulation',
+                      type='string', default='am',
+                      help='Modulation; one of am, lsb, usb, cw, nbfm, iq (default passband if -L/-H not specified)')
+    group.add_option('--ncomp', '--no_compression',
+                      dest='compression',
+                      default=True,
+                      action='store_false',
+                      help='Don\'t use audio compression')
+    group.add_option('-L', '--lp-cutoff',
+                      dest='lp_cut',
+                      type='float', default=None,
+                      help='Low-pass cutoff frequency, in Hz')
+    group.add_option('-H', '--hp-cutoff',
+                      dest='hp_cut',
+                      type='float', default=None,
+                      help='High-pass cutoff frequency, in Hz')
+    group.add_option('-r', '--resample',
+                      dest='resample',
+                      type='int', default=0,
+                      help='Resample output file to new sample rate in Hz. The resampling ratio has to be in the range [1/256,256]')
+    group.add_option('-T', '--squelch-threshold',
                       dest='thresh',
                       type='float', default=None,
                       help='Squelch threshold, in dB.')
-    parser.add_option('--squelch-tail',
+    group.add_option('--squelch-tail',
                       dest='squelch_tail',
                       type='float', default=1,
                       help='Time for which the squelch remains open after the signal is below threshold.')
-    parser.add_option('-g', '--agc-gain',
+    group.add_option('-g', '--agc-gain',
                       dest='agc_gain',
                       type='string',
                       default=None,
@@ -457,28 +458,54 @@ def main():
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
-    parser.add_option('-z', '--zoom',
-                      dest='zoom', type='int', default=0,
-                      help='Zoom level 0-14')
-    parser.add_option('--wf',
-                      dest='waterfall',
+    group.add_option('--nb',
+                      dest='nb',
+                      action='store_true', default=False,
+                      help='Enable noise blanker with default parameters.')
+    group.add_option('--nb-gate',
+                      dest='nb_gate',
+                      type='int', default=100,
+                      help='Noise blanker gate time in usec (100 to 5000, default 100)')
+    group.add_option('--nb-th', '--nb-thresh',
+                      dest='nb_thresh',
+                      type='int', default=50,
+                      help='Noise blanker threshold in percent (0 to 100, default 50)')
+    group.add_option('-w', '--kiwi-wav',
+                      dest='is_kiwi_wav',
                       default=False,
                       action='store_true',
-                      help='Process waterfall data instead of audio')
-    parser.add_option('--snd',
-                      dest='sound',
-                      default=False,
-                      action='store_true',
-                      help='Also process sound data when in waterfall mode')
-    parser.add_option('--S-meter', '--s-meter',
+                      help='In the wav file include KIWI header containing GPS time-stamps (only for IQ mode)')
+    group.add_option('--S-meter', '--s-meter',
                       dest='S_meter',
                       type='int', default=0,
                       help='Report S-meter(RSSI) value after S_METER number of averages. Does not write wav data to file.')
-    parser.add_option('--test-mode',
+    group.add_option('--kiwi-tdoa',
+                      dest='is_kiwi_tdoa',
+                      default=False,
+                      action='store_true',
+                      help='Used when called by Kiwi TDoA extension')
+    group.add_option('--test-mode',
                       dest='test_mode',
                       default=False,
                       action='store_true',
                       help='write wav data to /dev/null')
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "Waterfall connection options", "")
+    group.add_option('--wf',
+                      dest='waterfall',
+                      default=False,
+                      action='store_true',
+                      help='Process waterfall data instead of audio')
+    group.add_option('-z', '--zoom',
+                      dest='zoom', type='int', default=0,
+                      help='Zoom level 0-14')
+    group.add_option('--snd',
+                      dest='sound',
+                      default=False,
+                      action='store_true',
+                      help='Also process sound data when in waterfall mode (sound connection options above apply)')
+    parser.add_option_group(group)
 
     (options, unused_args) = parser.parse_args()
 

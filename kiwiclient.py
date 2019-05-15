@@ -102,6 +102,8 @@ class KiwiTimeLimitError(KiwiError):
     pass
 class KiwiServerTerminatedConnection(KiwiError):
     pass
+class KiwiUnknownModulation(KiwiError):
+    pass
 
 class KiwiSDRStreamBase(object):
     """KiwiSDR WebSocket stream base client."""
@@ -187,6 +189,32 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def set_mod(self, mod, lc, hc, freq):
         mod = mod.lower()
         self._modulation = mod
+        if lc == None or hc == None:
+            if mod == 'am':
+                lc = -6000 if lc == None else lc
+                hc = -6000 if hc == None else hc
+            else:
+                if mod == 'lsb':
+                    lc = -2700 if lc == None else lc
+                    hc =  -300 if hc == None else hc
+                else:
+                    if mod == 'usb':
+                        lc =  300 if lc == None else lc
+                        hc = 2700 if hc == None else hc
+                    else:
+                        if mod == 'cw':
+                            lc = 300 if lc == None else lc
+                            hc = 700 if hc == None else hc
+                        else:
+                            if mod == 'nbfm':
+                                lc = -6000 if lc == None else lc
+                                hc =  6000 if hc == None else hc
+                            else:
+                                if mod == 'iq':
+                                    lc = -5000 if lc == None else lc
+                                    hc =  5000 if hc == None else hc
+                                else:
+                                    raise KiwiUnknownModulation('"%s"' % mod)
         self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
 
     def set_agc(self, on=False, hang=False, thresh=-100, slope=6, decay=1000, gain=50):
@@ -197,6 +225,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
     def set_autonotch(self, val):
         self._send_message('SET lms_autonotch=%d' % (val))
+
+    def set_noise_blanker(self, gate, thresh):
+        self._send_message('SET nb=%d th=%d' % (gate, thresh))
 
     def _set_ar_ok(self, ar_in, ar_out):
         self._send_message('SET AR OK in=%d out=%d' % (ar_in, ar_out))
