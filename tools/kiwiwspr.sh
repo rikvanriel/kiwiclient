@@ -1,1 +1,0 @@
-kiwiwspr.1.1g.sh
