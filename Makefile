@@ -18,7 +18,8 @@ ifeq ($(UNAME),Darwin)
 kp:
 	killall -d -KILL Python
 kill:
-	killall -v -KILL Python
+#	killall -v -KILL Python
+	killall -v Python
 else
 kp kill:
 	killall -r -i -s KILL Python
@@ -121,29 +122,26 @@ tdoa:
 	python -u kiwirecorder.py -s $(HOST_TDOA) -f 1440 -m iq -L -5000 -H 5000 --kiwi-wav --kiwi-tdoa --tlimit=30 -u krec-TDoA
 
 
-# test reported crash situations
+# test reported problem situations
 
 #M = -m usb
 M = -m usb --ncomp     # mode used by kiwiwspr.sh
 #M = -m iq
+PH = $(HOST)
+PP = 8073
+#PH = kiwisdr.hameleers.net
+#PP = 8074
 
-crash:
-	python kiwirecorder.py -q --log-level=info -s $H --station=1 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=2 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=3 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=4 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=5 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=6 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=7 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-	python kiwirecorder.py -q --log-level=info -s $H --station=8 -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120 &
-crash5:
-	python kiwirecorder.py -q --log-level=info -s $H,$H,$H,$H,$H -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120
-crash6:
-	python kiwirecorder.py -q --log-level=info -s $H,$H,$H,$H,$H,$H -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120
-crash7:
-	python kiwirecorder.py -q --log-level=info -s $H,$H,$H,$H,$H,$H,$H -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120
-crash8:
-	python kiwirecorder.py -q --log-level=info -s $H,$H,$H,$H,$H,$H,$H,$H -f 28124.6 $M -L 1200 -H 1700 -T -101 --dt-sec 120
+slots6:
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=1 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=2 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=3 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=4 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=5 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=6 -f 28124.6 $M -L 1200 -H 1700 &
+slots2:
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=1 -f 124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info -s $(PH) -p $(PP) -u test --station=2 -f 124.6 $M -L 1200 -H 1700 &
 
 
 # IQ file with GPS timestamps
