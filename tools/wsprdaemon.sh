@@ -1,1 +1,1 @@
-wsprdaemon.2.3.sh
+wsprdaemon.2.5a.sh
