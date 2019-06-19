@@ -339,6 +339,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             if self._s_meter_avgs == self._options.S_meter:
                 print("RSSI: %6.1f" % self._s_meter_cma)
                 self._stop = True
+            return
 
         if self._modulation == 'iq':
             gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], struct.unpack('<BBII', buffer(data[0:10]))))
