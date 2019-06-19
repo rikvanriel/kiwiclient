@@ -521,7 +521,6 @@ def main():
     run_event.set()
 
     if options.S_meter != 0:
-        options.test_mode = True
         options.quiet = True
     options.raw = False;
     gopt = options
