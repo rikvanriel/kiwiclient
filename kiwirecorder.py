@@ -412,6 +412,11 @@ def main():
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
                       dest='socket_timeout', type='int', default=10,
                       help='Timeout(sec) for sockets')
+    parser.add_option('--stats',
+                      dest='stats',
+                      default=False,
+                      action='store_true',
+                      help='Print additional statistics (applies only to --S-meter mode currently)')
 
     group = OptionGroup(parser, "Audio connection options", "")
     group.add_option('-f', '--freq',
@@ -477,8 +482,8 @@ def main():
                       help='In the wav file include KIWI header containing GPS time-stamps (only for IQ mode)')
     group.add_option('--S-meter', '--s-meter',
                       dest='S_meter',
-                      type='int', default=0,
-                      help='Report S-meter(RSSI) value after S_METER number of averages. Does not write wav data to file.')
+                      type='int', default=-1,
+                      help='Report S-meter(RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Does not write wav data to file.')
     group.add_option('--kiwi-tdoa',
                       dest='is_kiwi_tdoa',
                       default=False,
@@ -488,7 +493,7 @@ def main():
                       dest='test_mode',
                       default=False,
                       action='store_true',
-                      help='write wav data to /dev/null')
+                      help='Write wav data to /dev/null')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
@@ -520,7 +525,7 @@ def main():
     run_event = threading.Event()
     run_event.set()
 
-    if options.S_meter != 0:
+    if options.S_meter >= 0:
         options.quiet = True
     options.raw = False;
     gopt = options

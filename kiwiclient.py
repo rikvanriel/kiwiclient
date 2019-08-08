@@ -180,7 +180,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._modulation = None
         self._compression = True
         self._gps_pos = [0,0]
-        self._s_meter_avgs = self._s_meter_cma = 0
+        self._s_meter_avgs = self._s_meter_cma = self._s_meter_valid = 0
+        self._meas_count = 0
         self._stop = False
 
     def connect(self, host, port):
@@ -331,11 +332,24 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         data       = body[7:]
         rssi       = 0.1*smeter - 127
         ##logging.info("SND flags %2d seq %6d RSSI %6.1f len %d" % (flags, seq, rssi, len(data)))
+        
+        # first rssi is no good because first audio buffer is leftover from last time this channel was used
+        if self._options.S_meter >= 0 and self._s_meter_valid == 0:
+            # tlimit in effect if streaming RSSI
+            self._start_time = time.time()
+            self._s_meter_valid = 1;
+            return
+        
+        if self._options.S_meter == 0:
+            self._meas_count += 1
+            print("RSSI: %6.1f" % rssi)
+            return
 
-        if self._options.S_meter != 0 and self._s_meter_avgs < self._options.S_meter:
+        if self._options.S_meter > 0 and self._s_meter_avgs < self._options.S_meter:
             self._s_meter_cma = (self._s_meter_cma * self._s_meter_avgs) + rssi
             self._s_meter_avgs += 1
             self._s_meter_cma /= self._s_meter_avgs
+            self._meas_count += 1
             if self._s_meter_avgs == self._options.S_meter:
                 print("RSSI: %6.1f" % self._s_meter_cma)
                 self._stop = True
@@ -440,10 +454,10 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._stream.send_message(msg)
         
         tlimit = self._options.tlimit
-        if tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit:
-            raise KiwiTimeLimitError('time limit reached')
-        
-        if self._stop:
+        time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
+        if time_limit or self._stop:
+            if self._options.stats and self._meas_count > 0 and self._start_time != None:
+                print("%.1f meas/sec" % (self._meas_count / (time.time() - self._start_time)))
             raise KiwiTimeLimitError('time limit reached')
 
 # EOF
