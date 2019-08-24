@@ -38,6 +38,8 @@ class KiwiWorker(threading.Thread):
                 logging.info("%s:%d %s. Reconnecting after 5 seconds"
                       % (self._options.server_host, self._options.server_port, e))
                 self._recorder.close()
+                if self._options.no_api:    ## don't retry
+                    break
                 self._recorder._start_ts = None ## this makes the recorder to open a new file on restart
                 self._event.wait(timeout=5)
                 continue
