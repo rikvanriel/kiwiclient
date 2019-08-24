@@ -146,6 +146,10 @@ slots6:
 slots2:
 	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 124.6 $M -L 1200 -H 1700 &
 	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 124.6 $M -L 1200 -H 1700 &
+no_api:
+	python kiwirecorder.py $(HP) --no-api
+no_api_user:
+	python kiwirecorder.py $(HP) --no-api --user=no_api_test
 
 
 # IQ file with GPS timestamps

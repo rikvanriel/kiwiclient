@@ -99,6 +99,10 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._resampler = None
 
     def _setup_rx_params(self):
+        if self._options.no_api:
+            if self._options.user != 'kiwirecorder.py':
+                self.set_name(self._options.user)
+            return
         self.set_name(self._options.user)
         mod    = self._options.modulation
         lp_cut = self._options.lp_cut
@@ -417,6 +421,11 @@ def main():
                       default=False,
                       action='store_true',
                       help='Print additional statistics (applies only to --S-meter mode currently)')
+    parser.add_option('--no-api',
+                      dest='no_api',
+                      default=False,
+                      action='store_true',
+                      help='Simulate connection to Kiwi using improper/incomplete API')
 
     group = OptionGroup(parser, "Audio connection options", "")
     group.add_option('-f', '--freq',
