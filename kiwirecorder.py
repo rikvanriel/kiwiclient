@@ -240,7 +240,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _get_output_filename(self):
         if self._options.test_mode:
-            return '/dev/null'
+            return os.devnull
         station = '' if self._options.station is None else '_'+ self._options.station
 
         # if multiple connections specified but not distinguished via --station then use index
@@ -539,7 +539,7 @@ def main():
                       dest='test_mode',
                       default=False,
                       action='store_true',
-                      help='Write wav data to /dev/null')
+                      help='Write wav data to /dev/null (Linux) or NUL (Windows)')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
