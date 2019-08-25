@@ -416,6 +416,11 @@ def main():
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
                       dest='socket_timeout', type='int', default=10,
                       help='Timeout(sec) for sockets')
+    parser.add_option('--OV',
+                      dest='ADC_OV',
+                      default=False,
+                      action='store_true',
+                      help='Print "ADC OV" message when Kiwi ADC is overloaded')
     parser.add_option('--stats',
                       dest='stats',
                       default=False,

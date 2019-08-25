@@ -333,6 +333,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         rssi       = 0.1*smeter - 127
         ##logging.info("SND flags %2d seq %6d RSSI %6.1f len %d" % (flags, seq, rssi, len(data)))
         
+        if self._options.ADC_OV and (flags & 2):
+            print(" ADC OV")
+        
         # first rssi is no good because first audio buffer is leftover from last time this channel was used
         if self._options.S_meter >= 0 and self._s_meter_valid == 0:
             # tlimit in effect if streaming RSSI
