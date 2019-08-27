@@ -32,7 +32,7 @@ def _write_wav_header(fp, filesize, samplerate, num_channels, is_kiwi_wav):
 
 class RingBuffer(object):
     def __init__(self, len):
-        self._array = np.zeros(len, dtype='float')
+        self._array = np.zeros(len, dtype='float64')
         self._index = 0
         self._is_filled = False
 
@@ -46,8 +46,44 @@ class RingBuffer(object):
     def is_filled(self):
         return self._is_filled
 
-    def median(self):
-        return np.median(self._array)
+    def applyFn(self, fn):
+        return fn(self._array)
+
+    def max_abs(self):
+        return np.max(np.abs(self._array))
+
+class GNSSPerformance(object):
+    def __init__(self):
+        self._last_solution = -1
+        self._last_ts = -1
+        self._num_frames = 0
+        self._buffer_dt_per_frame = RingBuffer(10)
+        self._buffer_num_frames   = RingBuffer(10)
+
+    def analyze(self, filename, gps):
+        ## gps = {'last_gps_solution': 1, 'dummy': 0, 'gpsnsec': 886417795, 'gpssec': 466823}
+        self._num_frames += 1
+        if gps['last_gps_solution'] == 0 and self._last_solution != 0:
+            ts = gps['gpssec'] + 1e-9 * gps['gpsnsec']
+            msg_gnss_drift = ''
+            if self._last_ts != -1:
+                dt = ts - self._last_ts
+                if dt < -12*3600*7:
+                    dt += 24*3600*7
+                if abs(dt) < 10:
+                    self._buffer_dt_per_frame.insert(dt / self._num_frames)
+                    self._buffer_num_frames.insert(self._num_frames)
+                if self._buffer_dt_per_frame.is_filled():
+                    std_dt_per_frame  = self._buffer_dt_per_frame.applyFn(np.std)
+                    mean_num_frames   = self._buffer_num_frames.applyFn(np.mean)
+                    msg_gnss_drift = 'std(clk drift)= %5.1f m' % (3e8 * std_dt_per_frame * mean_num_frames)
+
+            logging.info('%s: (%2d,%3d) t_gnss= %16.9f %s'
+                         % (filename, self._last_solution, self._num_frames, ts, msg_gnss_drift))
+            self._num_frames = 0
+            self._last_ts    = ts
+
+        self._last_solution = gps['last_gps_solution']
 
 
 class Squelch(object):
@@ -63,7 +99,7 @@ class Squelch(object):
             self._ring_buffer.insert(rssi)
         if not self._ring_buffer.is_filled():
             return False
-        median_nf   = self._ring_buffer.median()
+        median_nf   = self._ring_buffer.applyFn(np.median)
         rssi_thresh = median_nf + self._threshold
         is_open     = self._squelch_on_seq is not None
         if is_open:
@@ -97,6 +133,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
+        self._gnss_performance = GNSSPerformance()
 
     def _setup_rx_params(self):
         if self._options.no_api:
@@ -146,7 +183,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 self._start_ts = None
                 self._start_time = None
                 return
-        
+
         if self._options.resample > 0:
             if HAS_RESAMPLER:
                 ## libsamplerate resampling
@@ -203,7 +240,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _get_output_filename(self):
         if self._options.test_mode:
-            return '/dev/null'
+            return os.devnull
         station = '' if self._options.station is None else '_'+ self._options.station
 
         # if multiple connections specified but not distinguished via --station then use index
@@ -248,7 +285,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         with open(self._get_output_filename(), 'ab') as fp:
             if self._options.is_kiwi_wav:
                 gps = args[0]
-                logging.info('%s: last_gps_solution=%d gpssec=(%d,%d)' % (self._get_output_filename(), gps['last_gps_solution'], gps['gpssec'], gps['gpsnsec']));
+                self._gnss_performance.analyze(self._get_output_filename(), gps)
                 fp.write(struct.pack('<4sIBBII', b'kiwi', 10, gps['last_gps_solution'], 0, gps['gpssec'], gps['gpsnsec']))
                 sample_size = samples.itemsize * len(samples)
                 fp.write(struct.pack('<4sI', b'data', sample_size))
@@ -507,7 +544,7 @@ def main():
                       dest='test_mode',
                       default=False,
                       action='store_true',
-                      help='Write wav data to /dev/null')
+                      help='Write wav data to /dev/null (Linux) or NUL (Windows)')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
