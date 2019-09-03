@@ -90,9 +90,13 @@ class Squelch(object):
     def __init__(self, options):
         self._status_msg  = not options.quiet
         self._threshold   = options.thresh
-        self._tail_delay  = round(options.squelch_tail*12000/512) ## seconds to number of buffers
+        self._squelch_tail = options.squelch_tail ## in seconds
         self._ring_buffer = RingBuffer(65)
         self._squelch_on_seq = None
+        self.set_sample_rate(12000.0) ## default setting
+
+    def set_sample_rate(self, fs):
+        self._tail_delay  = round(self._squelch_tail*fs/512) ## seconds to number of buffers
 
     def process(self, seq, rssi):
         if not self._ring_buffer.is_filled() or self._squelch_on_seq is None:
@@ -164,6 +168,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self.set_noise_blanker(gate, thresh);
         self.set_inactivity_timeout(0)
         self._output_sample_rate = self._sample_rate
+        if self._squelch:
+            self._squelch.set_sample_rate(self._sample_rate)
         if self._options.resample > 0:
             self._output_sample_rate = self._options.resample
             self._ratio = float(self._output_sample_rate)/self._sample_rate
