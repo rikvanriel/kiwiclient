@@ -7,8 +7,7 @@ import math
 import numpy as np
 from copy import copy
 from traceback import print_exc
-from kiwiclient import KiwiSDRStream
-from kiwiworker import KiwiWorker
+from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
 from optparse import OptionGroup
 
@@ -150,7 +149,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         hp_cut = self._options.hp_cut
         if mod == 'am':
             # For AM, ignore the low pass filter cutoff
-            lp_cut = -hp_cut
+            lp_cut = -hp_cut if hp_cut is not None else hp_cut
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
         if self._options.agc_gain != None:
             self.set_agc(on=False, gain=self._options.agc_gain)

@@ -4,9 +4,7 @@ import logging
 import threading
 from traceback import print_exc
 
-from kiwiclient import KiwiTooBusyError
-from kiwiclient import KiwiTimeLimitError
-from kiwiclient import KiwiServerTerminatedConnection
+from .client import KiwiTooBusyError, KiwiTimeLimitError, KiwiServerTerminatedConnection
 
 class KiwiWorker(threading.Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):

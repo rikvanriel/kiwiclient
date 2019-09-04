@@ -24,7 +24,7 @@ import json
 import mod_pywebsocket.common
 from mod_pywebsocket._stream_base import ConnectionTerminatedException
 from mod_pywebsocket.stream import Stream, StreamOptions
-from wsclient import ClientHandshakeProcessor, ClientRequest
+from .wsclient import ClientHandshakeProcessor, ClientRequest
 
 #
 # IMAADPCM decoder
@@ -184,6 +184,10 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._meas_count = 0
         self._stop = False
 
+        self.MAX_FREQ = 30e3 ## in kHz
+        self.MAX_ZOOM = 14
+        self.WF_BINS  = 1024
+
     def connect(self, host, port):
         self._prepare_stream(host, port, self._type)
 
@@ -247,6 +251,22 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             if zoom != 0:
                 logging.error('in --wf mode -z and -f ignored because this Kiwi running software version < v1.329')
             self._send_message('SET zoom=%d start=%f' % (0, 0))
+
+    def zoom_to_span(self, zoom):
+        """return frequency span in kHz for a given zoom level"""
+        assert(zoom >=0 and zoom <= self.MAX_ZOOM)
+        return self.MAX_FREQ/2**zoom
+
+    def start_frequency_to_counter(self, start_frequency):
+        """convert a given start frequency in kHz to the counter value used in _set_zoom_start"""
+        assert(start_frequency >= 0 and start_frequency <= self.MAX_FREQ)
+        counter = round(start_frequency/self.MAX_FREQ * 2**self.MAX_ZOOM * self.WF_BINS)
+        ## actual start frequency
+        start_frequency = counter * self.MAX_FREQ / self.WF_BINS / 2**self.MAX_ZOOM
+        return counter,start_frequency
+
+    def _set_zoom_start(self, zoom, start):
+        self._send_message('SET zoom=%d start=%f' % (zoom, start))
 
     def _set_maxdb_mindb(self, maxdb, mindb):
         self._send_message('SET maxdb=%d mindb=%d' % (maxdb, mindb))
@@ -340,17 +360,15 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         data       = body[7:]
         rssi       = 0.1*smeter - 127
         ##logging.info("SND flags %2d seq %6d RSSI %6.1f len %d" % (flags, seq, rssi, len(data)))
-        
         if self._options.ADC_OV and (flags & 2):
             print(" ADC OV")
-        
         # first rssi is no good because first audio buffer is leftover from last time this channel was used
         if self._options.S_meter >= 0 and self._s_meter_valid == 0:
             # tlimit in effect if streaming RSSI
             self._start_time = time.time()
             self._s_meter_valid = 1;
             return
-        
+
         if self._options.S_meter == 0:
             self._meas_count += 1
             print("RSSI: %6.1f" % rssi)
@@ -428,7 +446,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if self._type == 'SND':
             self._set_mod('am', 100, 2800, 4625.0)
             self._set_agc(True)
-    
+
     def _writer_message(self):
         pass
 
@@ -458,12 +476,12 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             except ConnectionTerminatedException:
                     logging.debug('ConnectionTerminatedException')
                     raise KiwiServerTerminatedConnection('server closed the connection unexpectedly')
-    
+
             self._process_ws_message(received)
         else:
             msg = self._writer_message();
             self._stream.send_message(msg)
-        
+
         tlimit = self._options.tlimit
         time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
         if time_limit or self._stop:

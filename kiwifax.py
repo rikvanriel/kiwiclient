@@ -10,7 +10,8 @@ import cmath
 import traceback
 from optparse import OptionParser
 
-import kiwiclient
+from kiwi import KiwiSDRStream, KiwiTooBusyError, KiwiBadPasswordError
+
 import png
 
 
@@ -302,7 +303,7 @@ RADIOFAX_IOC576_START_TONE = 300
 RADIOFAX_IOC288_START_TONE = 675
 RADIOFAX_STOP_TONE = 450
 
-class KiwiFax(kiwiclient.KiwiSDRStream):
+class KiwiFax(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiFax, self).__init__()
         self._options = options
@@ -763,7 +764,7 @@ def main():
             break
         except Exception as e:
             traceback.print_exc()
-            print "Failed to connect, sleeping and reconnecting"
+            print("Failed to connect, sleeping and reconnecting")
             time.sleep(15)
             continue
         # Record
@@ -771,15 +772,15 @@ def main():
             while True:
               recorder.run()
             break
-        except (kiwiclient.KiwiTooBusyError, kiwiclient.KiwiBadPasswordError):
-            print "Server too busy now, sleeping and reconnecting"
+        except (KiwiTooBusyError, KiwiBadPasswordError):
+            print("Server too busy now, sleeping and reconnecting")
             time.sleep(15)
             continue
         except Exception as e:
             traceback.print_exc()
             break
     recorder.close()
-    print "exiting"
+    print("exiting")
 
 
 if __name__ == '__main__':

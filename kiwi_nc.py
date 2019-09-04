@@ -7,8 +7,7 @@ import numpy as np
 
 from copy import copy
 from traceback import print_exc
-from kiwiclient import KiwiSDRStream
-from kiwiworker import KiwiWorker
+from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
 
 class RingBuffer(object):
@@ -79,7 +78,7 @@ class KiwiNetcat(KiwiSDRStream):
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._fp_stdout = os.fdopen(sys.stdout.fileno(), 'wb')
-        
+
     def _setup_rx_params(self):
         self.set_name(self._options.user)
         if self._type == 'SND':
@@ -123,18 +122,10 @@ class KiwiNetcat(KiwiSDRStream):
                 self._start_ts = None
                 self._start_time = None
                 return
-        ##print gps['gpsnsec']-self._last_gps['gpsnsec']
-        #self._last_gps = gps
-        ## convert list of complex numbers into an array
         s = array.array('h')
         for x in [[y.real, y.imag] for y in samples]:
             s.extend(map(int, x))
         self._write_samples(s, gps)
-
-        # no GPS or no recent GPS solution
-        #last = gps['last_gps_solution']
-        #if last == 255 or last == 254:
-        #    self._options.status = 3
 
     def _process_waterfall_samples_raw(self, samples, seq):
         if self._options.progress is True:
@@ -315,6 +306,7 @@ def main():
     options.raw = True;
     options.S_meter = False;
     options.is_kiwi_tdoa = False;
+    options.no_api = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
