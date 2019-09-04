@@ -35,8 +35,11 @@ class KiwiWorker(threading.Thread):
                 while self._do_run():
                     self._recorder.run()
             except KiwiServerTerminatedConnection as e:
-                logging.info("%s:%d %s. Reconnecting after 5 seconds"
-                      % (self._options.server_host, self._options.server_port, e))
+                if self._options.no_api:
+                    msg = ''
+                else:
+                    msg = ' Reconnecting after 5 seconds'
+                logging.info("%s:%s %s.%s" % (self._options.server_host, self._options.server_port, e, msg))
                 self._recorder.close()
                 if self._options.no_api:    ## don't retry
                     break
