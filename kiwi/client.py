@@ -247,10 +247,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if major >= 2 or (major == 1 and minor >= 329):
             self._send_message('SET zoom=%d cf=%f' % (zoom, cf))
         else:
-            # For backward compatibility with Kiwi servers running < v1.329 before "cf=" API was added.
-            if zoom != 0:
-                logging.error('in --wf mode -z and -f ignored because this Kiwi running software version < v1.329')
-            self._send_message('SET zoom=%d start=%f' % (0, 0))
+            counter = start_frequency_to_counter(cf - zoom_to_span(zoom)/2)
+            self._send_message('SET zoom=%d start=%f' % (0, counter))
 
     def zoom_to_span(self, zoom):
         """return frequency span in kHz for a given zoom level"""
