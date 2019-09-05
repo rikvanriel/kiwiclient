@@ -240,12 +240,12 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _set_zoom_cf(self, zoom, cf):
         major = self._version_major if self._version_major != None else -1
         minor = self._version_minor if self._version_minor != None else -1
-        if major >= 2 or (major == 1 and minor >= 328):
+        if major >= 2 or (major == 1 and minor >= 329):
             self._send_message('SET zoom=%d cf=%f' % (zoom, cf))
         else:
-            # For backward compatibility with Kiwi servers running < v1.328 before "cf=" API was added.
+            # For backward compatibility with Kiwi servers running < v1.329 before "cf=" API was added.
             if zoom != 0:
-                logging.error('in --wf mode -z and -f ignored because this Kiwi running software version < v1.328')
+                logging.error('in --wf mode -z and -f ignored because this Kiwi running software version < v1.329')
             self._send_message('SET zoom=%d start=%f' % (0, 0))
 
     def _set_maxdb_mindb(self, maxdb, mindb):
