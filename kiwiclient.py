@@ -240,6 +240,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _set_zoom_start(self, zoom, start):
         self._send_message('SET zoom=%d start=%f' % (zoom, start))
 
+    def _set_zoom_cf(self, zoom, cf):
+        self._send_message('SET zoom=%d cf=%f' % (zoom, cf))
+
     def _set_maxdb_mindb(self, maxdb, mindb):
         self._send_message('SET maxdb=%d mindb=%d' % (maxdb, mindb))
 
