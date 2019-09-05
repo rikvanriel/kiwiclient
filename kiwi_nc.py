@@ -98,7 +98,7 @@ class KiwiNetcat(KiwiSDRStream):
                 self._set_snd_comp(False)
         else:   # waterfall
             self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
-            self._set_zoom_start(0, 0)
+            self._set_zoom_cf(0, 0)
             self._set_wf_comp(False)
             self._set_wf_speed(1)   # 1 Hz update
         self.set_inactivity_timeout(0)

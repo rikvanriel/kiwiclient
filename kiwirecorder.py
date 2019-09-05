@@ -328,10 +328,6 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
 
     def _setup_rx_params(self):
-        # For backward compatibility with Kiwi servers running versions before "cf=" API was added:
-        # Send old command with "start=0" so that WF startup will succeed even though correct
-        # start value will not be used when zoom != 0.
-        self._set_zoom_start(self._options.zoom, 0)
         self._set_zoom_cf(self._options.zoom, self._freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         #self._set_wf_comp(True)

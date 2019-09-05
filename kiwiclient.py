@@ -237,11 +237,16 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET genattn=%d' % (attn))
         self._send_message('SET gen=%d mix=%d' % (freq, -1))
 
-    def _set_zoom_start(self, zoom, start):
-        self._send_message('SET zoom=%d start=%f' % (zoom, start))
-
     def _set_zoom_cf(self, zoom, cf):
-        self._send_message('SET zoom=%d cf=%f' % (zoom, cf))
+        major = self._version_major if self._version_major != None else -1
+        minor = self._version_minor if self._version_minor != None else -1
+        if major >= 2 or (major == 1 and minor >= 329):
+            self._send_message('SET zoom=%d cf=%f' % (zoom, cf))
+        else:
+            # For backward compatibility with Kiwi servers running < v1.329 before "cf=" API was added.
+            if zoom != 0:
+                logging.error('in --wf mode -z and -f ignored because this Kiwi running software version < v1.329')
+            self._send_message('SET zoom=%d start=%f' % (0, 0))
 
     def _set_maxdb_mindb(self, maxdb, mindb):
         self._send_message('SET maxdb=%d mindb=%d' % (maxdb, mindb))
@@ -294,13 +299,13 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             # Also send a keepalive
             self._set_keepalive()
         elif name == 'version_maj':
-            self._version_major = value
+            self._version_major = int(value)
             if self._options.idx == 0 and self._version_major is not None and self._version_minor is not None:
-                logging.info("Server version: %s.%s", self._version_major, self._version_minor)
+                logging.info("Server version: %d.%d", self._version_major, self._version_minor)
         elif name == 'version_min':
-            self._version_minor = value
+            self._version_minor = int(value)
             if self._options.idx == 0 and self._version_major is not None and self._version_minor is not None:
-                logging.info("Server version: %s.%s", self._version_major, self._version_minor)
+                logging.info("Server version: %d.%d", self._version_major, self._version_minor)
 
     def _process_message(self, tag, body):
         if tag == 'MSG':
@@ -417,7 +422,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
     def _setup_rx_params(self):
         if self._type == 'W/F':
-            self._set_zoom_start(0, 0)
+            self._set_zoom_cf(0, 0)
             self._set_maxdb_mindb(-10, -110)
             self._set_wf_speed(1)
         if self._type == 'SND':
