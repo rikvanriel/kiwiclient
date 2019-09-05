@@ -170,7 +170,7 @@ iq:
 # process waterfall data
 
 wf:
-	python kiwirecorder.py --wf $(HP) $F --log_level info -u krec-WF
+	python kiwirecorder.py --wf $(HP) -f 10000 -z 4 --log_level info -u krec-WF --tlimit=2
 
 micro:
 	python microkiwi_waterfall.py $(HP) -z 0 -o 0

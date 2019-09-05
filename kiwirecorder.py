@@ -322,18 +322,24 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         #logging.info "%s:%s freq=%d" % (options.server_host, options.server_port, freq)
         self._freq = freq
         self._start_ts = None
+        self._start_time = None
 
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
 
     def _setup_rx_params(self):
-        self._set_zoom_start(0, 0)
+        # For backward compatibility with Kiwi servers running versions before "cf=" API was added:
+        # Send old command with "start=0" so that WF startup will succeed even though correct
+        # start value will not be used when zoom != 0.
+        self._set_zoom_start(self._options.zoom, 0)
+        self._set_zoom_cf(self._options.zoom, self._freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         #self._set_wf_comp(True)
         self._set_wf_comp(False)
         self._set_wf_speed(1)   # 1 Hz update
         self.set_inactivity_timeout(0)
         self.set_name(self._options.user)
+        self._start_time = time.time()
 
     def _process_waterfall_samples(self, seq, samples):
         nbins = len(samples)
