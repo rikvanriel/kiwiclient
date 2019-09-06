@@ -7,8 +7,7 @@ import math
 import numpy as np
 from copy import copy
 from traceback import print_exc
-from kiwiclient import KiwiSDRStream
-from kiwiworker import KiwiWorker
+from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
 from optparse import OptionGroup
 
@@ -90,9 +89,13 @@ class Squelch(object):
     def __init__(self, options):
         self._status_msg  = not options.quiet
         self._threshold   = options.thresh
-        self._tail_delay  = round(options.squelch_tail*12000/512) ## seconds to number of buffers
+        self._squelch_tail = options.squelch_tail ## in seconds
         self._ring_buffer = RingBuffer(65)
         self._squelch_on_seq = None
+        self.set_sample_rate(12000.0) ## default setting
+
+    def set_sample_rate(self, fs):
+        self._tail_delay  = round(self._squelch_tail*fs/512) ## seconds to number of buffers
 
     def process(self, seq, rssi):
         if not self._ring_buffer.is_filled() or self._squelch_on_seq is None:
@@ -146,7 +149,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         hp_cut = self._options.hp_cut
         if mod == 'am':
             # For AM, ignore the low pass filter cutoff
-            lp_cut = -hp_cut
+            lp_cut = -hp_cut if hp_cut is not None else hp_cut
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
         if self._options.agc_gain != None:
             self.set_agc(on=False, gain=self._options.agc_gain)
@@ -164,6 +167,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self.set_noise_blanker(gate, thresh);
         self.set_inactivity_timeout(0)
         self._output_sample_rate = self._sample_rate
+        if self._squelch:
+            self._squelch.set_sample_rate(self._sample_rate)
         if self._options.resample > 0:
             self._output_sample_rate = self._options.resample
             self._ratio = float(self._output_sample_rate)/self._sample_rate

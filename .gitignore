@@ -6,3 +6,4 @@ log*
 gnss_pos/
 *.o
 *.oct
+*.npy
