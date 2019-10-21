@@ -137,15 +137,39 @@ M = -m usb --ncomp     # mode used by kiwiwspr.sh
 #M = -m iq
 
 slots6:
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 28124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 28124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=3 -f 28124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=4 -f 28124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=5 -f 28124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=6 -f 28124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=3 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=4 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=5 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=6 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+slots8:
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=3 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=4 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=5 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=6 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=7 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=8 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+slots14:
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=3 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=4 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=5 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=6 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=7 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=8 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=9 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=10 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=11 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=12 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=13 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=14 -f 28124.6 $M -L 1200 -H 1700 --test-mode &
 slots2:
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 124.6 $M -L 1200 -H 1700 &
-	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 124.6 $M -L 1200 -H 1700 &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=1 -f 124.6 $M -L 1200 -H 1700 --test-mode &
+	python kiwirecorder.py -q --log-level=info $(HP) -u test --station=2 -f 124.6 $M -L 1200 -H 1700 --test-mode &
 no_api:
 	python kiwirecorder.py $(HP) --no-api
 no_api_user:
