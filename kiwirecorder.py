@@ -36,10 +36,10 @@ class RingBuffer(object):
         self._is_filled = False
 
     def insert(self, sample):
-        self._array[self._index] = sample;
+        self._array[self._index] = sample
         self._index += 1
         if self._index == len(self._array):
-            self._is_filled = True;
+            self._is_filled = True
             self._index = 0
 
     def is_filled(self):
@@ -164,7 +164,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             thresh = self._options.nb_thresh
             if thresh < 0 or thresh > 100:
                 thresh = 50
-            self.set_noise_blanker(gate, thresh);
+            self.set_noise_blanker(gate, thresh)
         self.set_inactivity_timeout(0)
         self._output_sample_rate = self._sample_rate
         if self._squelch:
@@ -371,11 +371,11 @@ def options_cross_product(options):
     multiple_connections = 0
     for i,s in enumerate(options.server_host):
         opt_single = copy(options)
-        opt_single.server_host = s;
-        opt_single.status = 0;
+        opt_single.server_host = s
+        opt_single.status = 0
 
         # time() returns seconds, so add pid and host index to make tstamp unique per connection
-        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff;
+        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
@@ -585,21 +585,21 @@ def main():
 
     if options.S_meter >= 0:
         options.quiet = True
-    options.raw = False;
+    options.raw = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
     snd_recorders = []
     if not gopt.waterfall or (gopt.waterfall and gopt.sound):
         for i,opt in enumerate(options):
-            opt.multiple_connections = multiple_connections;
+            opt.multiple_connections = multiple_connections
             opt.idx = i
             snd_recorders.append(KiwiWorker(args=(KiwiSoundRecorder(opt),opt,run_event)))
 
     wf_recorders = []
     if gopt.waterfall:
         for i,opt in enumerate(options):
-            opt.multiple_connections = multiple_connections;
+            opt.multiple_connections = multiple_connections
             opt.idx = i
             wf_recorders.append(KiwiWorker(args=(KiwiWaterfallRecorder(opt),opt,run_event)))
 

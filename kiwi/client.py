@@ -127,7 +127,7 @@ class KiwiSDRStreamBase(object):
         logging.warn(repr(body))
 
     def _prepare_stream(self, host, port, which):
-        self._stream_name = which;
+        self._stream_name = which
         self._socket = socket.create_connection(address=(host, port), timeout=self._options.socket_timeout)
         uri = '/%d/%s' % (self._options.tstamp, which)
         handshake = ClientHandshakeProcessor(self._socket, host, port)
@@ -270,11 +270,11 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET maxdb=%d mindb=%d' % (maxdb, mindb))
 
     def _set_snd_comp(self, comp):
-        self._compression = comp;
+        self._compression = comp
         self._send_message('SET compression=%d' % (1 if comp else 0))
 
     def _set_wf_comp(self, comp):
-        self._compression = comp;
+        self._compression = comp
         self._send_message('SET wf_comp=%d' % (1 if comp else 0))
 
     def _set_wf_speed(self, wf_speed):
@@ -364,7 +364,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if self._options.S_meter >= 0 and self._s_meter_valid == 0:
             # tlimit in effect if streaming RSSI
             self._start_time = time.time()
-            self._s_meter_valid = 1;
+            self._s_meter_valid = 1
             return
 
         if self._options.S_meter == 0:
@@ -477,7 +477,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
             self._process_ws_message(received)
         else:
-            msg = self._writer_message();
+            msg = self._writer_message()
             self._stream.send_message(msg)
 
         tlimit = self._options.tlimit

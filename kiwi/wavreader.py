@@ -96,7 +96,7 @@ class KiwiIQWavReader(collections.Iterator):
             ##t = self.gpssec + np.array(range(n))/self._samplerate
             self.process_iq_samples(t,z)
 
-        self._last_gpssec = self.gpssec;
+        self._last_gpssec = self.gpssec
         self._frame_counter += (self._frame_counter < 3)
         return t,z
 
