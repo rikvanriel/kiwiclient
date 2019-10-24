@@ -194,9 +194,9 @@ def main():
     opt.socket_timeout = 10
     opt.tlimit = None
     opt.no_api = True
-    opt.raw = False;
-    opt.S_meter = -1;
-    opt.ADC_OV = None;
+    opt.raw = False
+    opt.S_meter = -1
+    opt.ADC_OV = None
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(opt.log_level.upper()), format=FORMAT)
@@ -215,12 +215,12 @@ def main():
 
     try:
         opt.start_time = time.time()
-        opt.tstamp = int(time.time() + os.getpid()) & 0xffffffff;
+        opt.tstamp = int(time.time() + os.getpid()) & 0xffffffff
         opt.idx = 0
         snd_recorder.start()
 
         opt.start_time = time.time()
-        opt.tstamp = int(time.time() + os.getpid()+1) & 0xffffffff;
+        opt.tstamp = int(time.time() + os.getpid()+1) & 0xffffffff
         opt.idx = 1
         wf_recorder.start()
 

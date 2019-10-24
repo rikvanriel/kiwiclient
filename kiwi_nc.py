@@ -17,10 +17,10 @@ class RingBuffer(object):
         self._is_filled = False
 
     def insert(self, sample):
-        self._array[self._index] = sample;
+        self._array[self._index] = sample
         self._index += 1
         if self._index == len(self._array):
-            self._is_filled = True;
+            self._is_filled = True
             self._index = 0
 
     def is_filled(self):
@@ -67,7 +67,7 @@ class KiwiNetcat(KiwiSDRStream):
     def __init__(self, options, reader):
         super(KiwiNetcat, self).__init__()
         self._options = options
-        self._type = 'admin' if options.admin is True else ('W/F' if options.waterfall is True else 'SND');
+        self._type = 'admin' if options.admin is True else ('W/F' if options.waterfall is True else 'SND')
         self._reader = reader
         freq = options.frequency
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
@@ -174,11 +174,11 @@ def options_cross_product(options):
     multiple_connections = 0
     for i,s in enumerate(options.server_host):
         opt_single = copy(options)
-        opt_single.server_host = s;
-        opt_single.status = 0;
+        opt_single.server_host = s
+        opt_single.status = 0
 
         # time() returns seconds, so add pid and host index to make tstamp unique per connection
-        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff;
+        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'frequency', 'agc_gain', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
@@ -303,16 +303,17 @@ def main():
     run_event = threading.Event()
     run_event.set()
 
-    options.raw = True;
-    options.S_meter = False;
-    options.is_kiwi_tdoa = False;
+    options.raw = True
+    options.S_meter = -1
+    options.ADC_OV = None
+    options.is_kiwi_tdoa = False
     options.no_api = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
     nc_inst = []
     for i,opt in enumerate(options):
-        opt.multiple_connections = multiple_connections;
+        opt.multiple_connections = multiple_connections
         opt.idx = 0
         nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, True),opt,run_event)))
         opt.writer_init = False

@@ -8,7 +8,7 @@ import struct
 import time
 from datetime import datetime
 
-import wsclient
+from kiwi import wsclient
 
 import mod_pywebsocket.common
 from mod_pywebsocket.stream import Stream
