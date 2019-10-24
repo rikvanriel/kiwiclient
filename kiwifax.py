@@ -307,8 +307,8 @@ class KiwiFax(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiFax, self).__init__()
         self._options = options
-        self._reader = True;
-        self._options.idx = 0;
+        self._reader = True
+        self._options.idx = 0
         self._type = 'SND'
 
         self._ioc = options.ioc
@@ -719,11 +719,16 @@ def main():
                       dest='tlimit',
                       type='float', default=None,
                       help='Record time limit in seconds')
+    parser.add_option('--OV',
+                      dest='ADC_OV',
+                      default=False,
+                      action='store_true',
+                      help='Print "ADC OV" message when Kiwi ADC is overloaded')
 
     (options, unused_args) = parser.parse_args()
-    options.tstamp = int(time.time() + os.getpid()) & 0xffffffff;
-    options.raw = False;
-    options.S_meter = False;
+    options.tstamp = int(time.time() + os.getpid()) & 0xffffffff
+    options.raw = False
+    options.S_meter = -1
 
     # Setup logging
     fmtr = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', '%Y%m%dT%H%MZ')
