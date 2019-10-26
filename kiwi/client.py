@@ -181,7 +181,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._compression = True
         self._gps_pos = [0,0]
         self._s_meter_avgs = self._s_meter_cma = self._s_meter_valid = 0
-        self._meas_count = 0
+        self._tot_meas_count = self._meas_count = 0
         self._stop = False
 
         self.MAX_FREQ = 30e3 ## in kHz
@@ -360,26 +360,57 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         ##logging.info("SND flags %2d seq %6d RSSI %6.1f len %d" % (flags, seq, rssi, len(data)))
         if self._options.ADC_OV and (flags & 2):
             print(" ADC OV")
+
         # first rssi is no good because first audio buffer is leftover from last time this channel was used
         if self._options.S_meter >= 0 and self._s_meter_valid == 0:
             # tlimit in effect if streaming RSSI
             self._start_time = time.time()
             self._s_meter_valid = 1
+            self._start_ts = time.gmtime()
             return
 
-        if self._options.S_meter == 0:
+        if self._options.S_meter == 0 and self._options.dt == 0:
             self._meas_count += 1
-            print("RSSI: %6.1f" % rssi)
+            self._tot_meas_count += 1
+            if self._options.tstamp:
+                ts = time.strftime('%d-%b-%Y %H:%M:%S UTC', time.gmtime())
+                print("%s RSSI: %6.1f" % (ts, rssi))
+            else:
+                print("RSSI: %6.1f" % rssi)
             return
 
-        if self._options.S_meter > 0 and self._s_meter_avgs < self._options.S_meter:
+        if (self._options.S_meter > 0 and self._s_meter_avgs < self._options.S_meter) or self._options.dt != 0:
             self._s_meter_cma = (self._s_meter_cma * self._s_meter_avgs) + rssi
             self._s_meter_avgs += 1
             self._s_meter_cma /= self._s_meter_avgs
             self._meas_count += 1
-            if self._s_meter_avgs == self._options.S_meter:
-                print("RSSI: %6.1f" % self._s_meter_cma)
-                self._stop = True
+            self._tot_meas_count += 1
+            now = time.gmtime()
+            sec_of_day = lambda x: 3600*x.tm_hour + 60*x.tm_min + x.tm_sec
+            if self._options.dt != 0:
+                interval = (self._options.dt != 0) and (sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt)
+                meas_sec = self._meas_count/self._options.dt
+            else:
+                interval = 0
+            if self._s_meter_avgs == self._options.S_meter or interval:
+                if self._options.tstamp:
+                    ts = time.strftime('%d-%b-%Y %H:%M:%S UTC', now)
+                    if self._options.stats and self._options.dt:
+                        print("%s RSSI: %6.1f %.1f meas/sec" % (ts, self._s_meter_cma, meas_sec))
+                    else:
+                        print("%s RSSI: %6.1f" % (ts, self._s_meter_cma))
+                else:
+                    if self._options.stats and self._options.dt:
+                        print("RSSI: %6.1f %.1f meas/sec" % (self._s_meter_cma, meas_sec))
+                    else:
+                        print("RSSI: %6.1f" % self._s_meter_cma)
+                if interval:
+                    self._start_ts = time.gmtime()
+                if self._options.dt == 0:
+                    self._stop = True
+                else:
+                    self._s_meter_avgs = self._s_meter_cma = 0
+                    self._meas_count = 0
             return
 
         if self._modulation == 'iq':
@@ -483,8 +514,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         tlimit = self._options.tlimit
         time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
         if time_limit or self._stop:
-            if self._options.stats and self._meas_count > 0 and self._start_time != None:
-                print("%.1f meas/sec" % (self._meas_count / (time.time() - self._start_time)))
+            if self._options.stats and self._tot_meas_count > 0 and self._start_time != None:
+                print("%.1f meas/sec" % (self._tot_meas_count / (time.time() - self._start_time)))
             raise KiwiTimeLimitError('time limit reached')
 
 # EOF

@@ -452,7 +452,7 @@ def main():
     parser.add_option('--dt-sec',
                       dest='dt',
                       type='int', default=0,
-                      help='Start a new file when mod(sec_of_day,dt) == 0')
+                      help='Start a new file when mod(sec_of_day,dt) == 0. S-meter: measurement interval.')
     parser.add_option('--launch-delay', '--launch_delay',
                       dest='launch_delay',
                       type='int', default=0,
@@ -465,11 +465,16 @@ def main():
                       default=False,
                       action='store_true',
                       help='Print "ADC OV" message when Kiwi ADC is overloaded')
+    parser.add_option('--ts', '--tstamp', '--timestamp',
+                      dest='tstamp',
+                      default=False,
+                      action='store_true',
+                      help='Add timestamps to output. Applies only to S-meter mode currently.')
     parser.add_option('--stats',
                       dest='stats',
                       default=False,
                       action='store_true',
-                      help='Print additional statistics (applies only to --S-meter mode currently)')
+                      help='Print additional statistics. Applies only to S-meter mode currently.')
     parser.add_option('--no-api',
                       dest='no_api',
                       default=False,
@@ -538,10 +543,6 @@ def main():
                       default=False,
                       action='store_true',
                       help='In the wav file include KIWI header containing GPS time-stamps (only for IQ mode)')
-    group.add_option('--S-meter', '--s-meter',
-                      dest='S_meter',
-                      type='int', default=-1,
-                      help='Report S-meter(RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Does not write wav data to file.')
     group.add_option('--kiwi-tdoa',
                       dest='is_kiwi_tdoa',
                       default=False,
@@ -552,6 +553,13 @@ def main():
                       default=False,
                       action='store_true',
                       help='Write wav data to /dev/null (Linux) or NUL (Windows)')
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "S-meter mode options", "")
+    group.add_option('--S-meter', '--s-meter',
+                      dest='S_meter',
+                      type='int', default=-1,
+                      help='Report S-meter (RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Options --dt-sec, --ts and --stats apply.')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
@@ -584,6 +592,8 @@ def main():
     run_event.set()
 
     if options.S_meter >= 0:
+        if options.S_meter > 0 and options.dt != 0:
+            raise Exception('Options --S-meter > 0 and --dt-sec != 0 are incompatible. Did you mean to use --S-meter=0 ?')
         options.quiet = True
     options.raw = False
     gopt = options

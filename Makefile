@@ -123,6 +123,14 @@ smst:
 	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 --ncomp --stats
 	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 -m iq --stats
 
+s_meter_stream_timestamps:
+smts:
+	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats --tstamp
+
+s_meter_stream_interval:
+smsi:
+	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --ts --dt-sec=2 --tlimit=10 --stats
+
 
 # TDoA debugging
 
