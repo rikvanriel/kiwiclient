@@ -388,22 +388,16 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             now = time.gmtime()
             sec_of_day = lambda x: 3600*x.tm_hour + 60*x.tm_min + x.tm_sec
             if self._options.dt != 0:
-                interval = (self._options.dt != 0) and (sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt)
-                meas_sec = self._meas_count/self._options.dt
+                interval = (self._start_ts is not None) and (sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt)
+                meas_sec = float(self._meas_count)/self._options.dt
             else:
-                interval = 0
+                interval = False
             if self._s_meter_avgs == self._options.S_meter or interval:
-                if self._options.tstamp:
-                    ts = time.strftime('%d-%b-%Y %H:%M:%S UTC', now)
-                    if self._options.stats and self._options.dt:
-                        print("%s RSSI: %6.1f %.1f meas/sec" % (ts, self._s_meter_cma, meas_sec))
-                    else:
-                        print("%s RSSI: %6.1f" % (ts, self._s_meter_cma))
+                ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', now) if self._options.tstamp else ''
+                if self._options.stats and self._options.dt:
+                    print("%sRSSI: %6.1f %.1f meas/sec" % (ts, self._s_meter_cma, meas_sec))
                 else:
-                    if self._options.stats and self._options.dt:
-                        print("RSSI: %6.1f %.1f meas/sec" % (self._s_meter_cma, meas_sec))
-                    else:
-                        print("RSSI: %6.1f" % self._s_meter_cma)
+                    print("%sRSSI: %6.1f" % (ts, self._s_meter_cma))
                 if interval:
                     self._start_ts = time.gmtime()
                 if self._options.dt == 0:
