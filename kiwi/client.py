@@ -129,7 +129,7 @@ class KiwiSDRStreamBase(object):
     def _prepare_stream(self, host, port, which):
         self._stream_name = which
         self._socket = socket.create_connection(address=(host, port), timeout=self._options.socket_timeout)
-        uri = '/%d/%s' % (self._options.tstamp, which)
+        uri = '/%d/%s' % (self._options.timestamp, which)
         handshake = ClientHandshakeProcessor(self._socket, host, port)
         handshake.handshake(uri)
 
@@ -180,7 +180,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._modulation = None
         self._compression = True
         self._gps_pos = [0,0]
-        self._s_meter_avgs = self._s_meter_cma = self._s_meter_valid = 0
+        self._s_meter_avgs = self._s_meter_cma = 0
+        self._s_meter_valid = False
         self._tot_meas_count = self._meas_count = 0
         self._stop = False
 
@@ -362,50 +363,54 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             print(" ADC OV")
 
         # first rssi is no good because first audio buffer is leftover from last time this channel was used
-        if self._options.S_meter >= 0 and self._s_meter_valid == 0:
+        if self._options.S_meter >= 0 and not self._s_meter_valid:
             # tlimit in effect if streaming RSSI
             self._start_time = time.time()
-            self._s_meter_valid = 1
-            self._start_ts = time.gmtime()
-            return
+            self._start_sm_ts = time.gmtime()
+            self._s_meter_valid = True
+            if not self._options.sound:
+                return
+        else:
 
-        if self._options.S_meter == 0 and self._options.dt == 0:
-            self._meas_count += 1
-            self._tot_meas_count += 1
-            if self._options.tstamp:
-                ts = time.strftime('%d-%b-%Y %H:%M:%S UTC', time.gmtime())
-                print("%s RSSI: %6.1f" % (ts, rssi))
+            # streaming
+            if self._options.S_meter == 0 and self._options.sdt == 0:
+                self._meas_count += 1
+                self._tot_meas_count += 1
+                ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', time.gmtime()) if self._options.tstamp else ''
+                print("%sRSSI: %6.1f %d" % (ts, rssi, self._options.tstamp))
+                if not self._options.sound:
+                    return
             else:
-                print("RSSI: %6.1f" % rssi)
-            return
 
-        if (self._options.S_meter > 0 and self._s_meter_avgs < self._options.S_meter) or self._options.dt != 0:
-            self._s_meter_cma = (self._s_meter_cma * self._s_meter_avgs) + rssi
-            self._s_meter_avgs += 1
-            self._s_meter_cma /= self._s_meter_avgs
-            self._meas_count += 1
-            self._tot_meas_count += 1
-            now = time.gmtime()
-            sec_of_day = lambda x: 3600*x.tm_hour + 60*x.tm_min + x.tm_sec
-            if self._options.dt != 0:
-                interval = (self._start_ts is not None) and (sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt)
-                meas_sec = float(self._meas_count)/self._options.dt
-            else:
-                interval = False
-            if self._s_meter_avgs == self._options.S_meter or interval:
-                ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', now) if self._options.tstamp else ''
-                if self._options.stats and self._options.dt:
-                    print("%sRSSI: %6.1f %.1f meas/sec" % (ts, self._s_meter_cma, meas_sec))
-                else:
-                    print("%sRSSI: %6.1f" % (ts, self._s_meter_cma))
-                if interval:
-                    self._start_ts = time.gmtime()
-                if self._options.dt == 0:
-                    self._stop = True
-                else:
-                    self._s_meter_avgs = self._s_meter_cma = 0
-                    self._meas_count = 0
-            return
+                # averaging with optional dt
+                if self._options.S_meter >= 0:
+                    self._s_meter_cma = (self._s_meter_cma * self._s_meter_avgs) + rssi
+                    self._s_meter_avgs += 1
+                    self._s_meter_cma /= self._s_meter_avgs
+                    self._meas_count += 1
+                    self._tot_meas_count += 1
+                    now = time.gmtime()
+                    sec_of_day = lambda x: 3600*x.tm_hour + 60*x.tm_min + x.tm_sec
+                    if self._options.sdt != 0:
+                        interval = (self._start_sm_ts is not None) and (sec_of_day(now)//self._options.sdt != sec_of_day(self._start_sm_ts)//self._options.sdt)
+                        meas_sec = float(self._meas_count)/self._options.sdt
+                    else:
+                        interval = False
+                    if self._s_meter_avgs == self._options.S_meter or interval:
+                        ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', now) if self._options.tstamp else ''
+                        if self._options.stats and self._options.sdt:
+                            print("%sRSSI: %6.1f %.1f meas/sec" % (ts, self._s_meter_cma, meas_sec))
+                        else:
+                            print("%sRSSI: %6.1f" % (ts, self._s_meter_cma))
+                        if interval:
+                            self._start_sm_ts = time.gmtime()
+                        if self._options.sdt == 0:
+                            self._stop = True
+                        else:
+                            self._s_meter_avgs = self._s_meter_cma = 0
+                            self._meas_count = 0
+                    if not self._options.sound:
+                        return
 
         if self._modulation == 'iq':
             gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], struct.unpack('<BBII', buffer(data[0:10]))))
@@ -509,7 +514,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
         if time_limit or self._stop:
             if self._options.stats and self._tot_meas_count > 0 and self._start_time != None:
-                print("%.1f meas/sec" % (self._tot_meas_count / (time.time() - self._start_time)))
+                print("%.1f meas/sec" % (float(self._tot_meas_count) / (time.time() - self._start_time)))
             raise KiwiTimeLimitError('time limit reached')
 
 # EOF

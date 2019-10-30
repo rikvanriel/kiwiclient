@@ -100,6 +100,8 @@ rx8:
 	python kiwirecorder.py $(H8) $(F_PB) -u krec-RX8
 nb:
 	python kiwirecorder.py $(HP) $F -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
+2sec:
+	python kiwirecorder.py $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 
 
 # S-meter
@@ -129,7 +131,7 @@ smts:
 
 s_meter_stream_interval:
 smsi:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --ts --dt-sec=2 --tlimit=10 --stats
+	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tstamp --sdt-sec=1 --stats --log-level=info --dt-sec=4 --snd
 
 
 # TDoA debugging

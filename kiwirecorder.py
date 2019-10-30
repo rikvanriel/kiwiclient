@@ -274,9 +274,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
         """Output to a file on the disk."""
         now = time.gmtime()
         sec_of_day = lambda x: 3600*x.tm_hour + 60*x.tm_min + x.tm_sec
-        if self._start_ts is None or (self._options.filename == '' and
-                                      self._options.dt != 0 and
-                                      sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt):
+        dt_reached = self._options.dt != 0 and self._start_ts is not None and sec_of_day(now)//self._options.dt != sec_of_day(self._start_ts)//self._options.dt
+        if self._start_ts is None or (self._options.filename == '' and dt_reached):
             self._start_ts = now
             self._start_time = time.time()
             # Write a static WAV header
@@ -375,7 +374,7 @@ def options_cross_product(options):
         opt_single.status = 0
 
         # time() returns seconds, so add pid and host index to make tstamp unique per connection
-        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff
+        opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
@@ -448,11 +447,11 @@ def main():
     parser.add_option('--tlimit', '--time-limit',
                       dest='tlimit',
                       type='float', default=None,
-                      help='Record time limit in seconds')
+                      help='Record time limit in seconds. Ignored when --dt-sec used.')
     parser.add_option('--dt-sec',
                       dest='dt',
                       type='int', default=0,
-                      help='Start a new file when mod(sec_of_day,dt) == 0. S-meter: measurement interval.')
+                      help='Start a new file when mod(sec_of_day,dt) == 0')
     parser.add_option('--launch-delay', '--launch_delay',
                       dest='launch_delay',
                       type='int', default=0,
@@ -553,13 +552,22 @@ def main():
                       default=False,
                       action='store_true',
                       help='Write wav data to /dev/null (Linux) or NUL (Windows)')
+    group.add_option('--snd', '--sound',
+                      dest='sound',
+                      default=False,
+                      action='store_true',
+                      help='Also process sound data when in waterfall or S-meter mode (sound connection options above apply)')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "S-meter mode options", "")
     group.add_option('--S-meter', '--s-meter',
                       dest='S_meter',
                       type='int', default=-1,
-                      help='Report S-meter (RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Options --dt-sec, --ts and --stats apply.')
+                      help='Report S-meter (RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Options --ts and --stats apply.')
+    parser.add_option('--sdt-sec',
+                      dest='sdt',
+                      type='int', default=0,
+                      help='S-meter measurement interval')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
@@ -571,11 +579,6 @@ def main():
     group.add_option('-z', '--zoom',
                       dest='zoom', type='int', default=0,
                       help='Zoom level 0-14')
-    group.add_option('--snd',
-                      dest='sound',
-                      default=False,
-                      action='store_true',
-                      help='Also process sound data when in waterfall mode (sound connection options above apply)')
     parser.add_option_group(group)
 
     (options, unused_args) = parser.parse_args()
@@ -592,9 +595,13 @@ def main():
     run_event.set()
 
     if options.S_meter >= 0:
-        if options.S_meter > 0 and options.dt != 0:
-            raise Exception('Options --S-meter > 0 and --dt-sec != 0 are incompatible. Did you mean to use --S-meter=0 ?')
+        if options.S_meter > 0 and options.sdt != 0:
+            raise Exception('Options --S-meter > 0 and --sdt-sec != 0 are incompatible. Did you mean to use --S-meter=0 ?')
         options.quiet = True
+
+    if options.tlimit is not None and options.dt != 0:
+        print('Warning: --tlimit ignored when --dt-sec option used')
+
     options.raw = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
@@ -618,7 +625,7 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, tstamp=%d" % (i, options[i].tstamp))
+            #logging.info("started sound recorder %d, tstamp=%d" % (i, options[i].timestamp))
             logging.info("started sound recorder %d" % i)
 
         for i,r in enumerate(wf_recorders):
