@@ -456,9 +456,12 @@ def main():
                       dest='launch_delay',
                       type='int', default=0,
                       help='Delay (secs) in launching multiple connections')
+    parser.add_option('-c', '--connect-timeout', '--connect_timeout',
+                      dest='connect_timeout', type='int', default=15,
+                      help='Retry timeout(sec) connecting to host (zero for no retry)')
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
                       dest='socket_timeout', type='int', default=10,
-                      help='Timeout(sec) for sockets')
+                      help='Socket timeout(sec) during data transfers')
     parser.add_option('--OV',
                       dest='ADC_OV',
                       default=False,
