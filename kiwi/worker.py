@@ -25,7 +25,10 @@ class KiwiWorker(threading.Thread):
                 if self._options.is_kiwi_tdoa:
                     self._options.status = 1
                     break
-                self._event.wait(timeout=15)
+                if self._options.connect_timeout > 0:
+                    self._event.wait(timeout = self._options.connect_timeout)
+                else:
+                    break
                 continue
 
             try:
@@ -41,7 +44,7 @@ class KiwiWorker(threading.Thread):
                 self._recorder.close()
                 if self._options.no_api:    ## don't retry
                     break
-                self._recorder._start_ts = None ## this makes the recorder to open a new file on restart
+                self._recorder._start_ts = None ## this makes the recorder open a new file on restart
                 self._event.wait(timeout=5)
                 continue
             except KiwiTooBusyError:

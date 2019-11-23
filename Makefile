@@ -54,10 +54,16 @@ wspr2:
 # DRM
 # IQ and 10 kHz passband required
 
-FREQ_DRM = 3965
+#FREQ_DRM = 3965
+#FREQ_DRM = 15110
+FREQ_DRM = 15104.5
 
 drm:
 	python kiwirecorder.py $(HP) -f $(FREQ_DRM) -m iq -L -5000 -H 5000
+# see if Dream works using a real-mode stream (it does)
+# requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
+drm_real:
+	python kiwirecorder.py $(HP) -f $(FREQ_DRM) -m usb -L 0 -H 10000 --ncomp
 
 
 # FAX
@@ -146,6 +152,8 @@ T_MODE = -m usb --ncomp     # "no compression" mode used by wsprdaemon.sh
 #T_MODE = -m iq
 T_PARAMS = -q --log-level=info $(HP) -u test -f 28124.6 $M -L 1200 -H 1700 --test-mode $(T_MODE)
 
+slots1:
+	python kiwirecorder.py --station=1 $(T_PARAMS) &
 slots6:
 	python kiwirecorder.py --station=1 $(T_PARAMS) &
 	python kiwirecorder.py --station=2 $(T_PARAMS) &
