@@ -80,7 +80,7 @@ try:
     mysocket = socket.socket()
     mysocket.connect((host, port))
 except:
-    print "Failed to connect, sleeping and reconnecting"
+    print "Failed to connect"
     exit()   
 print "Socket open..."
 

@@ -308,6 +308,8 @@ def main():
     options.ADC_OV = None
     options.is_kiwi_tdoa = False
     options.no_api = False
+    options.connect_retries = 0
+    options.connect_timeout = 3
     gopt = options
     multiple_connections,options = options_cross_product(options)
 

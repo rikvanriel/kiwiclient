@@ -191,6 +191,8 @@ def main():
     parser.destroy()
 
     opt.is_kiwi_tdoa = False
+    opt.connect_retries = 3
+    opt.connect_timeout = 3
     opt.socket_timeout = 10
     opt.tlimit = None
     opt.no_api = True
