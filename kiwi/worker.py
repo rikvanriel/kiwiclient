@@ -17,6 +17,8 @@ class KiwiWorker(threading.Thread):
         return self._run_event.is_set()
 
     def run(self):
+        self.connect_count = self._options.connect_retries
+        
         while self._do_run():
             try:
                 self._recorder.connect(self._options.server_host, self._options.server_port)
@@ -25,10 +27,11 @@ class KiwiWorker(threading.Thread):
                 if self._options.is_kiwi_tdoa:
                     self._options.status = 1
                     break
+                self.connect_count -= 1
+                if self._options.connect_retries > 0 and self.connect_count == 0:
+                    break
                 if self._options.connect_timeout > 0:
                     self._event.wait(timeout = self._options.connect_timeout)
-                else:
-                    break
                 continue
 
             try:
