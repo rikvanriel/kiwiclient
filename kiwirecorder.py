@@ -165,7 +165,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if thresh < 0 or thresh > 100:
                 thresh = 50
             self.set_noise_blanker(gate, thresh)
-        self.set_inactivity_timeout(0)
         self._output_sample_rate = self._sample_rate
         if self._squelch:
             self._squelch.set_sample_rate(self._sample_rate)
@@ -337,7 +336,6 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         #self._set_wf_comp(True)
         self._set_wf_comp(False)
         self._set_wf_speed(1)   # 1 Hz update
-        self.set_inactivity_timeout(0)
         self.set_name(self._options.user)
         self._start_time = time.time()
 
@@ -375,7 +373,7 @@ def options_cross_product(options):
 
         # time() returns seconds, so add pid and host index to make tstamp unique per connection
         opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
-        for x in ['server_port', 'password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
+        for x in ['server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
         multiple_connections = i
@@ -408,6 +406,12 @@ def main():
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
                       help='Kiwi login password (if required, can be a comma delimited list)',
+                      action='callback',
+                      callback_args=(str,),
+                      callback=get_comma_separated_args)
+    parser.add_option('--tlimit-pw', '--tlimit-password',
+                      dest='tlimit_password', type='string', default='',
+                      help='Connect time limit exemption password (if required, can be a comma delimited list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
