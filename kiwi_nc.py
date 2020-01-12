@@ -100,7 +100,6 @@ class KiwiNetcat(KiwiSDRStream):
             self._set_zoom_cf(0, 0)
             self._set_wf_comp(False)
             self._set_wf_speed(1)   # 1 Hz update
-        self.set_inactivity_timeout(0)
 
     def _process_audio_samples_raw(self, seq, samples, rssi):
         if self._options.progress is True:

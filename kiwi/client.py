@@ -147,17 +147,17 @@ class KiwiSDRStreamBase(object):
             logging.debug("send SET (%s) %s", self._stream_name, msg)
         self._stream.send_message(msg)
 
-    def _set_auth(self, client_type, password=''):
-        self._send_message('SET auth t=%s p=%s' % (client_type, password))
+    def _set_auth(self, client_type, password='', tlimit_password=''):
+        if tlimit_password != '':
+            self._send_message('SET auth t=%s p=%s ipl=%s' % (client_type, password, tlimit_password))
+        else:
+            self._send_message('SET auth t=%s p=%s' % (client_type, password))
 
     def set_name(self, name):
         self._send_message('SET ident_user=%s' % (name))
 
     def set_geo(self, geo):
         self._send_message('SET geo=%s' % (geo))
-
-    def set_inactivity_timeout(self, timeout):
-        self._send_message('SET OVERRIDE inactivity_timeout=%d' % (timeout))
 
     def _set_keepalive(self):
         self._send_message('SET keepalive')
@@ -480,7 +480,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
     def open(self):
         if self._type == 'SND' or self._type == 'W/F':
-            self._set_auth('kiwi', self._options.password)
+            self._set_auth('kiwi', self._options.password, self._options.tlimit_password)
 
     def close(self):
         if self._stream == None:

@@ -372,7 +372,6 @@ class KiwiFax(KiwiSDRStream):
             self.set_mod('usb', RADIOFAX_BLACK_FREQ - df, RADIOFAX_WHITE_FREQ + df, self._options.frequency - 1.9)
         # TODO: figure out proper AGC parameters
         self.set_agc(True)
-        self.set_inactivity_timeout(0)
         self.set_name('kiwifax.py')
         # self.set_geo('Antarctica')
 

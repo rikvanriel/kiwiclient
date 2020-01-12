@@ -30,7 +30,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
         hp_cut = +1000
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
         self.set_agc(on=True)
-        self.set_inactivity_timeout(0)
 
     def _process_iq_samples(self, seq, samples, rssi, gps):
         if self._num_skip != 0:
@@ -63,7 +62,6 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         #self._set_wf_comp(True)
         self._set_wf_comp(False)
         self._set_wf_speed(1)   # 1 Hz update
-        self.set_inactivity_timeout(0)
         self.set_name(self._options.user)
 
     def _process_waterfall_samples(self, seq, samples):

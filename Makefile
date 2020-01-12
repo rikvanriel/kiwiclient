@@ -2,20 +2,26 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
-# set global environment variables KIWI_HOST / KIWI_PORT to the location of the Kiwi you want to work with
+# set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
 ifeq ($(KIWI_HOST)x,x)
     HOST = kiwisdr.local
-    PORT = 8073
 else
     HOST = $(KIWI_HOST)
+endif
+
+ifeq ($(KIWI_PORT)x,x)
+    PORT = 8073
+else
     PORT = $(KIWI_PORT)
 endif
 
+KREC = python kiwirecorder.py
+
 HP = -s $(HOST) -p $(PORT)
-H2P = -s $(HOST),$(HOST) -p $(PORT)
+H2 = -s $(HOST),$(HOST) -p $(PORT)
 H8 = -s $(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST) -p $(PORT)
 
-F = -f 1440
+F = -f 7550
 F_PB = $F -L -5000 -H 5000
 
 
@@ -44,11 +50,11 @@ ps:
 # NB: most WSPR programs use a pb center of 1500 Hz, not 750 which we use because we think it's easier to listen to
 
 wspr:
-	python kiwirecorder.py $(HP) --filename=wspr_40m -f 7039.35 --user=WSPR_40m -m iq -L 600 -H 900 --tlimit=110 --log_level=debug
+	$(KREC) $(HP) --filename=wspr_40m -f 7039.35 --user=WSPR_40m -m iq -L 600 -H 900 --tlimit=110 --log_level=debug
 
 # multiple connections
 wspr2:
-	python kiwirecorder.py $(HP2) --filename=wspr_40m,wspr_30m -f 7039.35,10139.45 --user=WSPR_40m,WSPR_30m -m iq -L 600 -H 900 --tlimit=110
+	$(KREC) $(HP2) --filename=wspr_40m,wspr_30m -f 7039.35,10139.45 --user=WSPR_40m,WSPR_30m -m iq -L 600 -H 900 --tlimit=110
 
 
 # DRM
@@ -56,14 +62,25 @@ wspr2:
 
 #FREQ_DRM = 3965
 #FREQ_DRM = 15110
-FREQ_DRM = 15104.5
+#FREQ_DRM = 15104.5
+#FREQ_DRM = 7550
+FREQ_DRM = 6030
+
+DRM = -m iq -L -4500 -H 4500 --tlimit=300 --user=DRM-record --log-level=info
 
 drm:
-	python kiwirecorder.py $(HP) -f $(FREQ_DRM) -m iq -L -5000 -H 5000
+	$(KREC) $(HP) -f $(FREQ_DRM) $(DRM)
+drm-828:
+	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 828 $(DRM) --filename=Delhi.828.12k.iq
+drm-1368:
+	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 1368 $(DRM) --filename=Delhi.1368.12k.iq
+drm-621:
+	$(KREC) -s bengaluru.twrmon.net -p 8073 -f 621 $(DRM) --filename=Bengaluru.621.12k.iq
+
 # see if Dream works using a real-mode stream (it does)
 # requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
 drm_real:
-	python kiwirecorder.py $(HP) -f $(FREQ_DRM) -m usb -L 0 -H 10000 --ncomp
+	$(KREC) $(HP) -f $(FREQ_DRM) -m usb -L 0 -H 10000 --ncomp
 
 
 # FAX
@@ -87,57 +104,57 @@ HOST_IQ1 = fenu-radio.ddns.net
 HOST_IQ2 = southwest.ddns.net
 
 two:
-	python kiwirecorder.py -s $(HOST_IQ1),$(HOST_IQ2) -p ($PORT) -f 77.5,60 --station=DCF77,MSF -m iq -L -5000 -H 5000
+	$(KREC) -s $(HOST_IQ1),$(HOST_IQ2) -p ($PORT) -f 77.5,60 --station=DCF77,MSF -m iq -L -5000 -H 5000
 
 
 # real mode (non-IQ) file
 # Should playback using standard .wav file player
 
 real:
-	python kiwirecorder.py $(HP) $(F_PB) --tlimit=10
+	$(KREC) $(HP) $(F_PB) --tlimit=10
 resample:
-	python kiwirecorder.py $(HP) $(F_PB) -r 6000 --tlimit=10
+	$(KREC) $(HP) $(F_PB) -r 6000 --tlimit=10
 resample_iq:
-	python kiwirecorder.py $(HP) $(F_PB) -r 6000 -m iq --tlimit=10
+	$(KREC) $(HP) $(F_PB) -r 6000 -m iq --tlimit=10
 ncomp:
-	python kiwirecorder.py $(HP) $(F_PB) --ncomp
+	$(KREC) $(HP) $(F_PB) --ncomp
 rx8:
-#	python kiwirecorder.py $(H8) $(F_PB) --launch-delay=15 --socket-timeout=120 -u krec-RX8
-	python kiwirecorder.py $(H8) $(F_PB) -u krec-RX8
+#	$(KREC) $(H8) $(F_PB) --launch-delay=15 --socket-timeout=120 -u krec-RX8
+	$(KREC) $(H8) $(F_PB) -u krec-RX8
 nb:
-	python kiwirecorder.py $(HP) $F -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
+	$(KREC) $(HP) $F -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
 2sec:
-	python kiwirecorder.py $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
+	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 
 
 # S-meter
 
 s_meter:
 sm:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=10
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=10 -m iq
+	$(KREC) $(HP) $(F_PB) --s-meter=10
+	$(KREC) $(HP) $(F_PB) --s-meter=10 -m iq
 s_meter_timed:
 smt:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=10 --stats
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=10 --ncomp --stats
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=10 -m iq --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=10 --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=10 --ncomp --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=10 -m iq --stats
 
 s_meter_stream:
 sms:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5
 s_meter_stream_timed:
 smst:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 --ncomp --stats
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 -m iq --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 --ncomp --stats
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 -m iq --stats
 
 s_meter_stream_timestamps:
 smts:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats --tstamp
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats --tstamp
 
 s_meter_stream_interval:
 smsi:
-	python kiwirecorder.py $(HP) $(F_PB) --s-meter=0 --tstamp --sdt-sec=1 --stats --log-level=info --dt-sec=4 --snd
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tstamp --sdt-sec=1 --stats --log-level=info --dt-sec=4 --snd
 
 
 # TDoA debugging
@@ -153,67 +170,68 @@ T_MODE = -m usb --ncomp     # "no compression" mode used by wsprdaemon.sh
 T_PARAMS = -q --log-level=info $(HP) -u test -f 28124.6 $M -L 1200 -H 1700 --test-mode $(T_MODE)
 
 slots1:
-	python kiwirecorder.py --station=1 $(T_PARAMS) &
+	$(KREC) --station=1 $(T_PARAMS) &
 slots6:
-	python kiwirecorder.py --station=1 $(T_PARAMS) &
-	python kiwirecorder.py --station=2 $(T_PARAMS) &
-	python kiwirecorder.py --station=3 $(T_PARAMS) &
-	python kiwirecorder.py --station=4 $(T_PARAMS) &
-	python kiwirecorder.py --station=5 $(T_PARAMS) &
-	python kiwirecorder.py --station=6 $(T_PARAMS) &
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
+	$(KREC) --station=5 $(T_PARAMS) &
+	$(KREC) --station=6 $(T_PARAMS) &
 slots8:
-	python kiwirecorder.py --station=1 $(T_PARAMS) &
-	python kiwirecorder.py --station=2 $(T_PARAMS) &
-	python kiwirecorder.py --station=3 $(T_PARAMS) &
-	python kiwirecorder.py --station=4 $(T_PARAMS) &
-	python kiwirecorder.py --station=5 $(T_PARAMS) &
-	python kiwirecorder.py --station=6 $(T_PARAMS) &
-	python kiwirecorder.py --station=7 $(T_PARAMS) &
-	python kiwirecorder.py --station=8 $(T_PARAMS) &
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
+	$(KREC) --station=5 $(T_PARAMS) &
+	$(KREC) --station=6 $(T_PARAMS) &
+	$(KREC) --station=7 $(T_PARAMS) &
+	$(KREC) --station=8 $(T_PARAMS) &
 slots14:
-	python kiwirecorder.py --station=1 $(T_PARAMS) &
-	python kiwirecorder.py --station=2 $(T_PARAMS) &
-	python kiwirecorder.py --station=3 $(T_PARAMS) &
-	python kiwirecorder.py --station=4 $(T_PARAMS) &
-	python kiwirecorder.py --station=5 $(T_PARAMS) &
-	python kiwirecorder.py --station=6 $(T_PARAMS) &
-	python kiwirecorder.py --station=7 $(T_PARAMS) &
-	python kiwirecorder.py --station=8 $(T_PARAMS) &
-	python kiwirecorder.py --station=9 $(T_PARAMS) &
-	python kiwirecorder.py --station=10 $(T_PARAMS) &
-	python kiwirecorder.py --station=11 $(T_PARAMS) &
-	python kiwirecorder.py --station=12 $(T_PARAMS) &
-	python kiwirecorder.py --station=13 $(T_PARAMS) &
-	python kiwirecorder.py --station=14 $(T_PARAMS) &
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
+	$(KREC) --station=5 $(T_PARAMS) &
+	$(KREC) --station=6 $(T_PARAMS) &
+	$(KREC) --station=7 $(T_PARAMS) &
+	$(KREC) --station=8 $(T_PARAMS) &
+	$(KREC) --station=9 $(T_PARAMS) &
+	$(KREC) --station=10 $(T_PARAMS) &
+	$(KREC) --station=11 $(T_PARAMS) &
+	$(KREC) --station=12 $(T_PARAMS) &
+	$(KREC) --station=13 $(T_PARAMS) &
+	$(KREC) --station=14 $(T_PARAMS) &
 slots2:
-	python kiwirecorder.py --station=1 $(T_PARAMS) &
-	python kiwirecorder.py --station=2 $(T_PARAMS) &
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
 
 no_api:
-	python kiwirecorder.py $(HP) --no-api
+#	$(KREC) $(HP) --no-api
+	$(KREC) $(HP) --no-api $(F_PB) --test-mode
 no_api_user:
-	python kiwirecorder.py $(HP) --no-api --user=no_api_test
+	$(KREC) $(HP) --no-api --user=no_api_test
 
 
 # IQ file with GPS timestamps
 
 gps:
-	python kiwirecorder.py $(HP) -f 77.5 --station=DCF77 --kiwi-wav --log_level info -m iq -L -5000 -H 5000
+	$(KREC) $(HP) -f 77.5 --station=DCF77 --kiwi-wav --log_level info -m iq -L -5000 -H 5000
 gps2:
-	python kiwirecorder.py $(HP) $F --kiwi-wav -m iq -L -5000 -H 5000
+	$(KREC) $(HP) $F --kiwi-wav -m iq -L -5000 -H 5000
 
 
 # IQ file without GPS timestamps
 # Should playback using standard .wav file player
 
 iq:
-	python kiwirecorder.py $(HP) $F -m iq --tlimit=10
+	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10
 
 
 # process waterfall data
 
 wf:
-	python kiwirecorder.py --wf $(HP) -f 10000 -z 4 --log_level info -u krec-WF --tlimit=2
+	$(KREC) --wf $(HP) -f 10000 -z 4 --log_level info -u krec-WF --tlimit=2
 
 micro:
 	python microkiwi_waterfall.py $(HP) -z 0 -o 0
@@ -232,7 +250,7 @@ tun:
 
 
 help h:
-	python kiwirecorder.py --help
+	$(KREC) --help
 
 clean:
 	-rm -f *.log *.wav *.png

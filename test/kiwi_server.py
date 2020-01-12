@@ -61,7 +61,7 @@ def handler(websocket, path):
         name = yield from websocket.recv()
         yield from websocket.send("MSG sample_rate=12001.135")
         name = yield from websocket.recv()
-        while name != 'SET OVERRIDE inactivity_timeout=0':
+        while name.startswith("agc=") is False:
             name = yield from websocket.recv()
 
         ##consumer_task = asyncio.ensure_future(
