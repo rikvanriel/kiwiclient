@@ -661,6 +661,9 @@ def main():
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
                       help='Kiwi login password (if required)')
+    parser.add_option('--tlimit-pw', '--tlimit-password',
+                      dest='tlimit_password', type='string', default='',
+                      help='Connect time limit exemption password')
     parser.add_option('-q', '--iq',
                       dest='iq_mode',
                       action='store_true', default=False,
@@ -725,7 +728,7 @@ def main():
                       help='Print "ADC OV" message when Kiwi ADC is overloaded')
 
     (options, unused_args) = parser.parse_args()
-    options.tstamp = int(time.time() + os.getpid()) & 0xffffffff
+    options.timestamp = int(time.time() + os.getpid()) & 0xffffffff
     options.raw = False
     options.S_meter = -1
 

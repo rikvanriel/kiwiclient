@@ -15,6 +15,12 @@ else
     PORT = $(KIWI_PORT)
 endif
 
+ifeq ($(KIWI_FREQ)x,x)
+    FREQ = 10000
+else
+    FREQ = $(KIWI_FREQ)
+endif
+
 KREC = python kiwirecorder.py
 
 HP = -s $(HOST) -p $(PORT)
@@ -60,16 +66,15 @@ wspr2:
 # DRM
 # IQ and 10 kHz passband required
 
-#FREQ_DRM = 3965
-#FREQ_DRM = 15110
-#FREQ_DRM = 15104.5
-#FREQ_DRM = 7550
-FREQ_DRM = 6030
-
-DRM = -m iq -L -4500 -H 4500 --tlimit=300 --user=DRM-record --log-level=info
+DRM_COMMON = -m iq -L -5000 -H 5000 --user=DRM-record --log-level=info
+DRM = $(DRM_COMMON) --tlimit=300
 
 drm:
-	$(KREC) $(HP) -f $(FREQ_DRM) $(DRM)
+	$(KREC) $(HP) -f $(KIWI_FREQ) $(DRM)
+drm-crash:
+	$(KREC) -s nnsdr.proxy.kiwisdr.com -p 8073 -f 13765 $(DRM_COMMON) --filename=AAC.crash.1.13765.12k.iq
+drm-crash2:
+	$(KREC) -s sysdr.proxy.kiwisdr.com -p 8073 -f 13765 $(DRM_COMMON) --filename=AAC.crash.2.13765.12k.iq
 drm-828:
 	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 828 $(DRM) --filename=Delhi.828.12k.iq
 drm-1368:
@@ -79,24 +84,17 @@ drm-621:
 
 # see if Dream works using a real-mode stream (it does)
 # requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
-drm_real:
-	$(KREC) $(HP) -f $(FREQ_DRM) -m usb -L 0 -H 10000 --ncomp
+dream_real:
+	$(KREC) $(HP) -f $(KIWI_FREQ) -m usb -L 0 -H 10000 --ncomp
 
 
 # FAX
 # has both real and IQ mode decoding
 
-# UK
-#FREQ_FAX = 2618.5
-#FREQ_FAX = 7880
-
-# Australia
-FREQ_FAX = 16135
-
 fax:
-	python kiwifax.py $(HP) -f $(FREQ_FAX) -F
+	python kiwifax.py $(HP) -f $(KIWI_FREQ) -F
 faxiq:
-	python kiwifax.py $(HP) -f $(FREQ_FAX) -F --iq-stream
+	python kiwifax.py $(HP) -f $(KIWI_FREQ) -F --iq-stream
 
 
 # Two separate IQ files recording in parallel
@@ -125,6 +123,8 @@ nb:
 	$(KREC) $(HP) $F -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
 2sec:
 	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
+debug:
+	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
 
 
 # S-meter
@@ -216,9 +216,9 @@ no_api_user:
 # IQ file with GPS timestamps
 
 gps:
-	$(KREC) $(HP) -f 77.5 --station=DCF77 --kiwi-wav --log_level info -m iq -L -5000 -H 5000
+	$(KREC) $(HP) -f 77.5  -L -5000 -H 5000 -m iq --station=DCF77 --kiwi-wav --log_level info
 gps2:
-	$(KREC) $(HP) $F --kiwi-wav -m iq -L -5000 -H 5000
+	$(KREC) $(HP) $F -m iq -L -5000 -H 5000 --kiwi-wav
 
 
 # IQ file without GPS timestamps
@@ -231,7 +231,7 @@ iq:
 # process waterfall data
 
 wf:
-	$(KREC) --wf $(HP) -f 10000 -z 4 --log_level info -u krec-WF --tlimit=2
+	$(KREC) --wf $(HP) -f $(KIWI_FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
 
 micro:
 	python microkiwi_waterfall.py $(HP) -z 0 -o 0

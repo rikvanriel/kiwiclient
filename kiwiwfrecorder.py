@@ -215,12 +215,12 @@ def main():
 
     try:
         opt.start_time = time.time()
-        opt.tstamp = int(time.time() + os.getpid()) & 0xffffffff
+        opt.timestamp = int(time.time() + os.getpid()) & 0xffffffff
         opt.idx = 0
         snd_recorder.start()
 
         opt.start_time = time.time()
-        opt.tstamp = int(time.time() + os.getpid()+1) & 0xffffffff
+        opt.timestamp = int(time.time() + os.getpid()+1) & 0xffffffff
         opt.idx = 1
         wf_recorder.start()
 
