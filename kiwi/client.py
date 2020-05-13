@@ -149,6 +149,10 @@ class KiwiSDRStreamBase(object):
 
     def _set_auth(self, client_type, password='', tlimit_password=''):
         if tlimit_password != '':
+            if password == '':
+                ## when the password is empty set it to '#' in order to correctly parse tlimit_password
+                ## note that '#' as a password is being ignored by the kiwi server
+                password = '#'
             self._send_message('SET auth t=%s p=%s ipl=%s' % (client_type, password, tlimit_password))
         else:
             self._send_message('SET auth t=%s p=%s' % (client_type, password))
