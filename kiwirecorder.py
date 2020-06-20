@@ -411,40 +411,43 @@ def main():
                    " are shown above.",
                    "To record data from multiple Kiwis at once, use the same syntax,"
               " but pass a list of values (where applicable) instead of a single value."
-              " Each list of values should be comma-delimited and without spaces."
+              " Each list of values should be comma-separated and without spaces."
               " For instance, to record one Kiwi at localhost on port 80, and another Kiwi"
               " at example.com port 8073, run the following:",
               "    kiwirecorder.py -s localhost,example.com -p 80,8073 -f 10000,10000 -m am",
-              "In this example, both Kiwis will record on 10,000 kHz (10 MHz) in AM mode."]
+              "In this example, both Kiwis will record on 10,000 kHz (10 MHz) in AM mode."
+              " Any option that states \"can be a comma-separated list\" also means a single"
+              " value will be duplicated across multiple connection. In the above example"
+              " the simpler \"-f 10000\" can been used.", ""]
     epilog = [] # text here would go after the options list
     parser = MyParser(usage=usage, description=description, epilog=epilog)
     parser.add_option('-s', '--server-host',
                       dest='server_host', type='string',
-                      default='localhost', help='Server host (can be a comma-delimited list)',
+                      default='localhost', help='Server host (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-p', '--server-port',
                       dest='server_port', type='string',
-                      default=8073, help='Server port, default 8073 (can be a comma delimited list)',
+                      default=8073, help='Server port, default 8073 (can be a comma-separated list)',
                       action='callback',
                       callback_args=(int,),
                       callback=get_comma_separated_args)
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
-                      help='Kiwi login password (if required, can be a comma delimited list)',
+                      help='Kiwi login password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('--tlimit-pw', '--tlimit-password',
                       dest='tlimit_password', type='string', default='',
-                      help='Connect time limit exemption password (if required, can be a comma delimited list)',
+                      help='Connect time limit exemption password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-u', '--user',
                       dest='user', type='string', default='kiwirecorder.py',
-                      help='Kiwi connection user name',
+                      help='Kiwi connection user name (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
@@ -471,7 +474,7 @@ def main():
     parser.add_option('--fn', '--filename',
                       dest='filename',
                       type='string', default='',
-                      help='Use fixed filename instead of generated filenames (optional station ID(s) will apply)',
+                      help='Use fixed filename instead of generated filenames (optional station ID(s) will apply, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
