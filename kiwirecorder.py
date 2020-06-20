@@ -519,6 +519,11 @@ def main():
                       default=False,
                       action='store_true',
                       help='Simulate connection to Kiwi using improper/incomplete API')
+    parser.add_option('-v', '-V', '--version',
+                      dest='krec_version',
+                      default=False,
+                      action='store_true',
+                      help='Print version number and exit')
 
     group = OptionGroup(parser, "Audio connection options", "")
     group.add_option('-f', '--freq',
@@ -604,7 +609,7 @@ def main():
                       dest='S_meter',
                       type='int', default=-1,
                       help='Report S-meter (RSSI) value after S_METER number of averages. S_METER=0 does no averaging and reports each RSSI value received. Options --ts and --stats apply.')
-    parser.add_option('--sdt-sec',
+    group.add_option('--sdt-sec',
                       dest='sdt',
                       type='int', default=0,
                       help='S-meter measurement interval')
@@ -625,6 +630,10 @@ def main():
 
     ## clean up OptionParser which has cyclic references
     parser.destroy()
+    
+    if options.krec_version:
+        print('kiwirecorder v1.0')
+        sys.exit()
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(options.log_level.upper()), format=FORMAT)
