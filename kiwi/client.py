@@ -202,7 +202,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if lc == None or hc == None:
             if mod == 'am':
                 lc = -6000 if lc == None else lc
-                hc = -6000 if hc == None else hc
+                hc =  6000 if hc == None else hc
             else:
                 if mod == 'lsb':
                     lc = -2700 if lc == None else lc

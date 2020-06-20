@@ -371,7 +371,7 @@ def options_cross_product(options):
         opt_single.server_host = s
         opt_single.status = 0
 
-        # time() returns seconds, so add pid and host index to make tstamp unique per connection
+        # time() returns seconds, so add pid and host index to make timestamp unique per connection
         opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
@@ -390,34 +390,64 @@ def join_threads(snd, wf):
     [t.join() for t in threading.enumerate() if t is not threading.currentThread()]
 
 def main():
-    parser = OptionParser()
+    # extend the OptionParser so that we can print multiple paragraphs in
+    # the help text
+    class MyParser(OptionParser):
+        def format_description(self, formatter):
+            result = []
+            for paragraph in self.description:
+                result.append(formatter.format_description(paragraph))
+            return "\n".join(result[:-1]) # drop last \n
+
+        def format_epilog(self, formatter):
+            result = []
+            for paragraph in self.epilog:
+                result.append(formatter.format_epilog(paragraph))
+            return "".join(result)
+
+    usage = "%prog -s SERVER -p PORT -f FREQ -m MODE [other options]"
+    description = ["kiwirecorder.py records data from one or more KiwiSDRs to your disk."
+                   " It takes a number of options as inputs, the most basic of which"
+                   " are shown above.",
+                   "To record data from multiple Kiwis at once, use the same syntax,"
+              " but pass a list of values (where applicable) instead of a single value."
+              " Each list of values should be comma-separated and without spaces."
+              " For instance, to record one Kiwi at localhost on port 80, and another Kiwi"
+              " at example.com port 8073, run the following:",
+              "    kiwirecorder.py -s localhost,example.com -p 80,8073 -f 10000,10000 -m am",
+              "In this example, both Kiwis will record on 10,000 kHz (10 MHz) in AM mode."
+              " Any option that states \"can be a comma-separated list\" also means a single"
+              " value will be duplicated across multiple connection. In the above example"
+              " the simpler \"-f 10000\" can been used.", ""]
+    epilog = [] # text here would go after the options list
+    parser = MyParser(usage=usage, description=description, epilog=epilog)
     parser.add_option('-s', '--server-host',
                       dest='server_host', type='string',
-                      default='localhost', help='Server host (can be a comma-delimited list)',
+                      default='localhost', help='Server host (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-p', '--server-port',
                       dest='server_port', type='string',
-                      default=8073, help='Server port, default 8073 (can be a comma delimited list)',
+                      default=8073, help='Server port, default 8073 (can be a comma-separated list)',
                       action='callback',
                       callback_args=(int,),
                       callback=get_comma_separated_args)
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
-                      help='Kiwi login password (if required, can be a comma delimited list)',
+                      help='Kiwi login password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('--tlimit-pw', '--tlimit-password',
                       dest='tlimit_password', type='string', default='',
-                      help='Connect time limit exemption password (if required, can be a comma delimited list)',
+                      help='Connect time limit exemption password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-u', '--user',
                       dest='user', type='string', default='kiwirecorder.py',
-                      help='Kiwi connection user name',
+                      help='Kiwi connection user name (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
@@ -444,7 +474,7 @@ def main():
     parser.add_option('--fn', '--filename',
                       dest='filename',
                       type='string', default='',
-                      help='Use fixed filename instead of generated filenames (optional station ID(s) will apply)',
+                      help='Use fixed filename instead of generated filenames (optional station ID(s) will apply, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
@@ -635,7 +665,7 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, tstamp=%d" % (i, options[i].timestamp))
+            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].timestamp))
             logging.info("started sound recorder %d" % i)
 
         for i,r in enumerate(wf_recorders):

@@ -176,8 +176,8 @@ def options_cross_product(options):
         opt_single.server_host = s
         opt_single.status = 0
 
-        # time() returns seconds, so add pid and host index to make tstamp unique per connection
-        opt_single.tstamp = int(time.time() + os.getpid() + i) & 0xffffffff
+        # time() returns seconds, so add pid and host index to make timestamp unique per connection
+        opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'frequency', 'agc_gain', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
@@ -326,7 +326,7 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, tstamp=%d" % (i, options[i].tstamp))
+            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].timestamp))
             logging.info("started sound recorder %d" % i)
 
         while run_event.is_set():
