@@ -107,7 +107,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
     def _on_sample_rate_change(self):
         if self._options.resample is 0:
             if hasattr(self, 'player'):
-                self.player.__exit__()
+                self.player.__exit__(exc_type=None, exc_value=None, traceback=None)
             self._output_sample_rate = int(self._sample_rate)
             self.player = self.speaker.player(samplerate=self._output_sample_rate, blocksize=4096)
             self.player.__enter__()
