@@ -97,9 +97,12 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 xp = np.arange(n)
                 samples = np.round(np.interp(xa,xp,samples)).astype(np.int16)
 
-        # RIEL: convert samples to numpy block of floats
-        # print("\nsamples ", samples.astype(np.int16))
-        self.player.play(samples.astype(np.float32))
+
+        # Convert the int16 samples [-32768,32,767] to the floating point
+        # samples [-1.0,1.0] SoundCard expects
+        fsamples = samples.astype(np.float32)
+        fsamples /= 32768
+        self.player.play(fsamples)
 
     def _on_sample_rate_change(self):
         if self._options.resample is 0:
@@ -108,7 +111,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self._output_sample_rate = int(self._sample_rate)
             self.player = self.speaker.player(samplerate=self._output_sample_rate, blocksize=4096)
             self.player.__enter__()
-            print("self.player.stream = ", self.player.stream)
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
