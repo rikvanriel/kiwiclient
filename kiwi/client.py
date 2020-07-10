@@ -435,7 +435,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                 self._process_audio_samples_raw(seq, data, rssi)
             else:
                 if self._compression:
-                    samples = self._decoder.decode(data)
+                    sarray = self._decoder.decode(data)
+                    count = len(sarray)
+                    samples = np.ndarray(count, dtype='int16', buffer=sarray)
                 else:
                     count = len(data) // 2
                     samples = np.ndarray(count, dtype='>h', buffer=data).astype(np.int16)
