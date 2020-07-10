@@ -344,6 +344,7 @@ def main():
     options.dir = None
     options.raw = False
     options.sound = True
+    options.no_api = False
     options.tstamp = False
     options.station = None
     options.filename = None
