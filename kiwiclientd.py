@@ -35,14 +35,15 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
-        self.speaker = sc.get_speaker(options.sounddevice)
-        if self.speaker is None:
+        self._speaker = sc.get_speaker(options.sounddevice)
+        self._output_sample_rate = 0
+        if self._speaker is None:
             if options.sounddevice is None:
                 print('Using default sound device. Specify --sound-device?')
                 options.sounddevice = 'default'
             else:
                 print("Could not find %s, using default", options.sounddevice)
-            self.speaker = sc.default_speaker()
+            self._speaker = sc.default_speaker()
 
 
     def _setup_rx_params(self):
@@ -68,7 +69,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if thresh < 0 or thresh > 100:
                 thresh = 50
             self.set_noise_blanker(gate, thresh)
-        self._output_sample_rate = self._sample_rate
+        self._output_sample_rate = int(self._sample_rate)
         if self._options.resample > 0:
             self._output_sample_rate = self._options.resample
             self._ratio = float(self._output_sample_rate)/self._sample_rate
@@ -76,8 +77,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if not HAS_RESAMPLER:
                 logging.info("libsamplerate not available: linear interpolation is used for low-quality resampling. "
                              "(pip install samplerate)")
-        self.player = self.speaker.player(samplerate=int(self._output_sample_rate), blocksize=4096)
-        self.player.__enter__()
+        self._player = self._speaker.player(samplerate=int(self._output_sample_rate), blocksize=4096)
+        self._player.__enter__()
 
     def _process_audio_samples(self, seq, samples, rssi):
         if self._options.quiet is False:
@@ -102,15 +103,18 @@ class KiwiSoundRecorder(KiwiSDRStream):
         # samples [-1.0,1.0] SoundCard expects
         fsamples = samples.astype(np.float32)
         fsamples /= 32768
-        self.player.play(fsamples)
+        self._player.play(fsamples)
 
     def _on_sample_rate_change(self):
         if self._options.resample is 0:
+            if self._output_sample_rate == int(self._sample_rate):
+                return
+            # reinitialize player if the playback sample rate changed
             if hasattr(self, 'player'):
-                self.player.__exit__(exc_type=None, exc_value=None, traceback=None)
+                self._player.__exit__(exc_type=None, exc_value=None, traceback=None)
             self._output_sample_rate = int(self._sample_rate)
-            self.player = self.speaker.player(samplerate=self._output_sample_rate, blocksize=4096)
-            self.player.__enter__()
+            self._player = self._speaker.player(samplerate=self._output_sample_rate, blocksize=4096)
+            self._player.__enter__()
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
