@@ -188,6 +188,7 @@ def main():
     ## clean up OptionParser which has cyclic references
     parser.destroy()
 
+    opt.rigctl_enabled = False
     opt.is_kiwi_tdoa = False
     opt.connect_retries = 3
     opt.connect_timeout = 3

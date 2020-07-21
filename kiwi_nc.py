@@ -309,6 +309,7 @@ def main():
     options.no_api = False
     options.connect_retries = 0
     options.connect_timeout = 3
+    options.rigctl_enabled = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
 

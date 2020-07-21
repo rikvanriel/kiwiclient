@@ -731,6 +731,7 @@ def main():
     options.timestamp = int(time.time() + os.getpid()) & 0xffffffff
     options.raw = False
     options.S_meter = -1
+    options.rigctl_enabled = False
 
     # Setup logging
     fmtr = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', '%Y%m%dT%H%MZ')
