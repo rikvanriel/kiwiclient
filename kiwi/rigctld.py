@@ -84,7 +84,7 @@ class Rigctld(object):
 
     def _dump_state(self):
         # hamlib expects this large table of rig info when connecting
-        rigctlver = "1\n"
+        rigctlver = "0\n"
         rig_model = "2\n"
         itu_region = "0\n"
         freqs = "0.000000 30000000.000000"
@@ -107,14 +107,14 @@ class Rigctld(object):
         max_xit = "0\n"
         max_ifshift = "0\n"
         announces = "0\n"
-        get_func = "0\n"
-        set_func = "0\n"
-        get_level = "0\n"
-        set_level = "0\n"
-        get_parm = "0\n"
-        set_parm = "0\n"
-        preamp = "0 \n"
-        attenuator = "0 \n"
+        preamp = "\n"
+        attenuator = "\n"
+        get_func = "0x0\n"
+        set_func = "0x0\n"
+        get_level = "0x0\n"
+        set_level = "0x0\n"
+        get_parm = "0x0\n"
+        set_parm = "0x0\n"
         vfo_ops = "vfo_ops=0x0\n"
         ptt_type = "ptt_type=0x0\n"
         done = "done\n"
@@ -124,9 +124,9 @@ class Rigctld(object):
         message += tuningsteps + steps_end
         message += ssbfilt + cwfilt + amfilt + fmfilt + filt_end
         message += max_rit + max_xit + max_ifshift + announces
+        message += preamp + attenuator
         message += get_func + set_func + get_level + set_level
-        message += get_parm + set_parm
-        message += preamp + attenuator + vfo_ops + ptt_type + done
+        message += get_parm + set_parm + vfo_ops + ptt_type + done
 
         return message
 
@@ -141,7 +141,7 @@ class Rigctld(object):
                 pass
             return "RPRT 0\n"
         elif command.startswith('\chk_vfo'):
-            return "CHKVFO 0\n"
+            return "0\n"
         elif command.startswith('\dump_state'):
             return self._dump_state()
         elif command.startswith('f'):
