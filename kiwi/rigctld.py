@@ -153,8 +153,8 @@ class Rigctld(object):
         elif command.startswith('m'):
             # get modulation
             highcut = int(self._kiwisdrstream._highcut)
-            mod = self._kiwisdrstream._modulation
-            return "{}\n{}\n".format(mod, highcut)
+            mod = self._kiwisdrstream.get_mod()
+            return "{}\n{}\n".format(mod.upper(), highcut)
         elif command.startswith('M'):
             return self._set_modulation(command)
         elif command.startswith('s'):
