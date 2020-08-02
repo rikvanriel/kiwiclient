@@ -49,6 +49,12 @@ class Rigctld(object):
         s.listen()
         self._serversocket = s
 
+    def close(self):
+        for s in self._clientsockets:
+            s.close()
+            self._clientsockets.remove(s)
+        self._serversocket.close()
+
     def _set_modulation(self, command):
         # The M (set modulation) command has two parameters:
         # M <mode> <passband>
