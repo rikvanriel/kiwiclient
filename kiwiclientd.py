@@ -38,8 +38,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._output_sample_rate = 0
 
     def _init_player(self):
-        # if hasattr(self, 'player'):
-        #    self._player.__exit__(exc_type=None, exc_value=None, traceback=None)
+        if hasattr(self, 'player'):
+            self._player.__exit__(exc_type=None, exc_value=None, traceback=None)
         options = self._options
         speaker = sc.get_speaker(options.sounddevice)
         rate = self._output_sample_rate
