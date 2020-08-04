@@ -59,7 +59,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 break
             except Exception as ex:
                 print("speaker.player failed with ", ex)
-                sleep(0.1)
+                time.sleep(0.1)
                 pass
 
     def _setup_rx_params(self):
