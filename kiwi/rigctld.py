@@ -31,6 +31,9 @@ class rigsocket(socket.socket):
             self.buffer = ""
             return ""
 
+        if len(self.buffer) == 0:
+            return ""
+
         # the buffer contains one or more complete commands
         if self.buffer[-1] == "\n":
             result = self.buffer
