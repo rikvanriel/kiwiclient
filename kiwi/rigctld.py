@@ -63,13 +63,12 @@ class Rigctld(object):
             splitcmd = command.split()
             mod = splitcmd[1]
             try:
-                hc = splitcmd[2]
+                hc = int(splitcmd[2])
             except:
                 hc = None
-            # lc = self._kiwisdrstream._lowcut
             freq = self._kiwisdrstream.get_frequency()
             # print("calling set_mod", mod, lc, hc, freq)
-            self._kiwisdrstream.set_mod(mod, lc, hc, freq)
+            self._kiwisdrstream.set_mod(mod, None, hc, freq)
             return "RPRT 0\n"
         except:
             return "RPRT -1\n"
