@@ -17,6 +17,35 @@ import struct
 import time
 import select
 
+class rigsocket(socket.socket):
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        super().__init__(family, type, proto, fileno)
+        self.buffer=""
+
+    def recv_command(self):
+        buf = self.recv(4096)
+        try:
+            self.buffer += buf.decode('ASCII')
+        except socket.error:
+            # just ignore non-ASCII
+            self.buffer = ""
+            return ""
+
+        # the buffer contains one or more complete commands
+        if self.buffer[-1] == "\n":
+            result = self.buffer
+            self.buffer = ""
+            return result
+
+    # nabbed from socket.accept, but returns a rigsock instead
+    def accept(self):
+        fd, addr = self._accept()
+        rigsock = rigsocket(self.family, self.type, self.proto, fileno=fd)
+        if socket.getdefaulttimeout() is None and self.gettimeout():
+            sock.setblocking(True)
+        return rigsock, addr
+
+
 class Rigctld(object):
     def __init__(self, kiwisdrstream=None, port=None, ipaddr=None):
         self._kiwisdrstream = kiwisdrstream
@@ -31,10 +60,10 @@ class Rigctld(object):
         try:
             socket.inet_aton(ipaddr)
             addr = (ipaddr, port)
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s = rigsocket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error:
             addr = (ipaddr, port, 0, 0)
-            s = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            s = rigsocket(socket.AF_INET6, socket.SOCK_STREAM)
 
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.setblocking(0)
@@ -189,18 +218,12 @@ class Rigctld(object):
             self._clientsockets.remove(s)
 
         for s in readable:
-            # TODO: add one-char-at-a-time write delay handling
             try:
-                command = s.recv(4096)
-                try:
-                    command = command.decode('ASCII')
-                except:
-                    # someone sent non-ASCII, just ignore them
-                    continue
+                command = s.recv_command()
             except socket.error:
                 continue
 
-            if len(command) > 0:
+            if command != None and len(command) > 0:
                 reply = ""
                 # sometimes hamlib programs send multiple commands at once
                 for line in command.splitlines():
