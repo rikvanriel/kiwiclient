@@ -136,14 +136,14 @@ def options_cross_product(options):
 
     l = []
     multiple_connections = 0
-    for i,s in enumerate(options.server_host):
+    for i,s in enumerate(options.rigctl_port):
         opt_single = copy(options)
-        opt_single.server_host = s
+        opt_single.rigctl_port = s
         opt_single.status = 0
 
         # time() returns seconds, so add pid and host index to make timestamp unique per connection
         opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
-        for x in ['server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'station', 'user']:
+        for x in ['server_host', 'server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'station', 'user', 'sounddevice', 'rigctl_port']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
         multiple_connections = i
@@ -180,7 +180,14 @@ def main():
                    " send KiwiSDR audio to various programs to decode the"
                    " received signals."
                    " This program also accepts hamlib rigctl commands over"
-                   " a network socket to change the kiwisdr frequency",""]
+                   " a network socket to change the kiwisdr frequency"
+                   " To stream multiple KiwiSDR channels at once, use the"
+                   " same syntax, but pass a list of values (where applicable)"
+                   " instead of single values. For example, to stream"
+                   " two KiwiSDR channels in USB to the virtual sound cards"
+                   " kiwisdr0 & kiwisdr1, with the rigctl ports 6400 &"
+                   " 6401 respectively, run the following:",
+                   "$ kiwiclientd.py -s kiwisdr.example.com -p 8073 -f 10000 -m usb --snddev kiwisnd0,kiwisnd1 --rigctl-port 6400,6401" ,""]
     epilog = [] # text here would go after the options list
     parser = MyParser(usage=usage, description=description, epilog=epilog)
     parser.add_option('-s', '--server-host',
@@ -313,7 +320,10 @@ def main():
     group.add_option('--snddev', '--sound-device',
                       dest='sounddevice',
                       type='string', default='',
-                      help='Sound device to play kiwi audio on')
+                      action='callback',
+                      help='Sound device to play kiwi audio on (can be comma separated list)',
+                      callback_args=(str,),
+                      callback=get_comma_separated_args)
     group.add_option('--ls-snd', '--list-sound-devices',
                       dest='list_sound_devices',
                       default=False,
@@ -329,8 +339,11 @@ def main():
                       help='Enable rigctld backend for frequency changes.')
     group.add_option('--rigctl-port', '--rigctl-port',
                       dest='rigctl_port',
-                      type='int', default='6400',
-                      help='Port listening for rigctl commands (default 6400)')
+                      type='string', default='6400',
+                      help='Port listening for rigctl commands (default 6400, can be comma separated list',
+                      action='callback',
+                      callback_args=(int,),
+                      callback=get_comma_separated_args)
     group.add_option('--rigctl-addr', '--rigctl-address',
                       dest='rigctl_address',
                       type='string', default=None,
@@ -386,8 +399,8 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].timestamp))
-            logging.info("started sound recorder %d" % i)
+            #logging.info("started kiwi client %d, timestamp=%d" % (i, options[i].timestamp))
+            logging.info("started kiwi client %d" % i)
 
         while run_event.is_set():
             time.sleep(.1)
