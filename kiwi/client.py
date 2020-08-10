@@ -233,9 +233,6 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def set_squelch(self, sq, thresh):
         self._send_message('SET squelch=%d max=%d' % (sq, thresh))
 
-    def set_autonotch(self, val):
-        self._send_message('SET lms_autonotch=%d' % (val))
-
     def set_noise_blanker(self, gate, thresh):
         self._send_message('SET nb=%d th=%d' % (gate, thresh))
 
@@ -310,7 +307,6 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._on_sample_rate_change()
             # Optional, but is it?..
             self.set_squelch(0, 0)
-            self.set_autonotch(0)
             self._set_gen(0, 0)
             # Required to get rolling
             self._setup_rx_params()
