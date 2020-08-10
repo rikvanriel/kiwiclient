@@ -116,7 +116,22 @@ class KiwiSDRStreamBase(object):
         self._version_major = None
         self._version_minor = None
         self._modulation = None
+        self._lowcut = 0
+        self._highcut = 0
+        self._frequency = 0
         self._stream = None
+
+    def get_mod(self):
+        return self._modulation
+
+    def get_lowcut(self):
+        return self._lowcut
+
+    def get_highcut(self):
+        return self._highcut
+
+    def get_frequency(self):
+        return self._frequency
 
     def connect(self, host, port):
         # self._prepare_stream(host, port, 'SND')
@@ -182,6 +197,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._version_major = None
         self._version_minor = None
         self._modulation = None
+        self._lowcut = 0
+        self._highcut = 0
+        self._frequency = 0
         self._compression = True
         self._gps_pos = [0,0]
         self._s_meter_avgs = self._s_meter_cma = 0
@@ -226,6 +244,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                                 else:
                                     raise KiwiUnknownModulation('"%s"' % mod)
         self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
+        self._lowcut = lc
+        self._highcut = hc
+        self._frequency = freq
 
     def set_agc(self, on=False, hang=False, thresh=-100, slope=6, decay=1000, gain=50):
         self._send_message('SET agc=%d hang=%d thresh=%d slope=%d decay=%d manGain=%d' % (on, hang, thresh, slope, decay, gain))
@@ -377,7 +398,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                 self._meas_count += 1
                 self._tot_meas_count += 1
                 ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', time.gmtime()) if self._options.tstamp else ''
-                print("%sRSSI: %6.1f %d" % (ts, rssi, self._options.tstamp))
+                logging.debug("%sRSSI: %6.1f %d" % (ts, rssi, self._options.tstamp))
                 if not self._options.sound:
                     return
             else:

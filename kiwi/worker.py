@@ -5,6 +5,7 @@ import threading
 from traceback import print_exc
 
 from .client import KiwiTooBusyError, KiwiTimeLimitError, KiwiServerTerminatedConnection
+from .rigctld import Rigctld
 
 class KiwiWorker(threading.Thread):
     def __init__(self, group=None, target=None, name=None, args=(), kwargs=None):
@@ -12,6 +13,9 @@ class KiwiWorker(threading.Thread):
         self._recorder, self._options, self._run_event = args
         self._recorder._reader = True
         self._event = threading.Event()
+        self._rigctld = None
+        if self._options.rigctl_enabled:
+            self._rigctld = Rigctld(self._recorder, self._options.rigctl_port, self._options.rigctl_address)
 
     def _do_run(self):
         return self._run_event.is_set()
@@ -38,6 +42,9 @@ class KiwiWorker(threading.Thread):
                 self._recorder.open()
                 while self._do_run():
                     self._recorder.run()
+                    # do things like freq changes while not receiving sound
+                    if self._rigctld:
+                        self._rigctld.run()
             except KiwiServerTerminatedConnection as e:
                 if self._options.no_api:
                     msg = ''
@@ -68,3 +75,5 @@ class KiwiWorker(threading.Thread):
 
         self._run_event.clear()   # tell all other threads to stop
         self._recorder.close()
+        if self._rigctld:
+            self._rigctld.close()

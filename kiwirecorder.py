@@ -652,6 +652,7 @@ def main():
         print('Warning: --tlimit ignored when --dt-sec option used')
 
     options.raw = False
+    options.rigctl_enabled = False
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
