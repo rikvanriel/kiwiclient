@@ -12,10 +12,16 @@ On many Linux distributions the command would be similar to `'apt install python
 
 ## Demo code
 
-The following demo programs are provided to you to play with:
+The following demo programs are provided. Use the `--help` argument to see all program options.
 
-* `kiwirecorder`: record audio to WAV files, with squelch
-* `kiwifax`: decode radiofax and save as PNGs, with auto start, stop, and phasing
+* `kiwirecorder`: Record audio to WAV files, with squelch.
+* `kiwiwfrecorder`: Prints various waterfall statistics.
+* `kiwifax`: Decode radiofax and save as PNGs, with auto start, stop, and phasing.
+* `kiwiclientd`: Plays Kiwi audio on sound cards (real & virtual) for use by programs like fldigi and wsjtx.  
+    Implements hamlib rigctl network interface so the Kiwi freq & mode can be controlled by these programs.
+* `kiwi_nc`: Command line pipeline tool in the style of `netcat` (unfinished).
+
+The `Makefile` contains numerous examples of how to use these programs.
 
 ## IS0KYB micro tools
 
@@ -26,7 +32,7 @@ There is now the possibility to change zoom level and offset frequency (this is 
 * `microkiwi_waterfall.py`: launch this program with no filename and just the SNR will be computed, with a filename, the raw waterfall data is saved. Launch with `--help` to list all options.
 * `waterfall_data_analysis.ipynb`: this is a demo jupyther notebook to interactively analyze waterfall data. Easily transformable into a standalone python program.
 
-The data is, at the moment, transferred in uncompressed format. I'll add soon the ADPCM decode routines.
+The data is, at the moment, transferred in uncompressed format.
 
 ## Guide to the code
 

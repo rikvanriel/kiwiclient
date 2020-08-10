@@ -178,7 +178,7 @@ def options_cross_product(options):
 
         # time() returns seconds, so add pid and host index to make timestamp unique per connection
         opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
-        for x in ['server_port', 'password', 'frequency', 'agc_gain', 'user']:
+        for x in ['server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
         multiple_connections = i
@@ -222,6 +222,12 @@ def main():
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
                       help='Kiwi login password (if required, can be a comma delimited list)',
+                      action='callback',
+                      callback_args=(str,),
+                      callback=get_comma_separated_args)
+    parser.add_option('--tlimit-pw', '--tlimit-password',
+                      dest='tlimit_password', type='string', default='',
+                      help='Connect time limit exemption password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)

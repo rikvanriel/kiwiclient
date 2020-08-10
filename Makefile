@@ -70,7 +70,7 @@ DRM_COMMON = -m iq -L -5000 -H 5000 --user=DRM-record --log-level=info
 DRM = $(DRM_COMMON) --tlimit=300
 
 drm:
-	$(KREC) $(HP) -f $(KIWI_FREQ) $(DRM)
+	$(KREC) $(HP) -f $(FREQ) $(DRM)
 drm-crash:
 	$(KREC) -s nnsdr.proxy.kiwisdr.com -p 8073 -f 13765 $(DRM_COMMON) --filename=AAC.crash.1.13765.12k.iq
 drm-crash2:
@@ -85,16 +85,16 @@ drm-621:
 # see if Dream works using a real-mode stream (it does)
 # requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
 dream_real:
-	$(KREC) $(HP) -f $(KIWI_FREQ) -m usb -L 0 -H 10000 --ncomp
+	$(KREC) $(HP) -f $(FREQ) -m usb -L 0 -H 10000 --ncomp
 
 
 # FAX
 # has both real and IQ mode decoding
 
 fax:
-	python kiwifax.py $(HP) -f $(KIWI_FREQ) -F
+	python kiwifax.py $(HP) -f $(FREQ) -F
 faxiq:
-	python kiwifax.py $(HP) -f $(KIWI_FREQ) -F --iq-stream
+	python kiwifax.py $(HP) -f $(FREQ) -F --iq-stream
 
 
 # Two separate IQ files recording in parallel
@@ -233,7 +233,7 @@ iq:
 # process waterfall data
 
 wf:
-	$(KREC) --wf $(HP) -f $(KIWI_FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
+	$(KREC) --wf $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
 
 micro:
 	python microkiwi_waterfall.py $(HP) -z 0 -o 0
@@ -252,6 +252,10 @@ tun:
 
 
 help h:
+	@echo HOST = $(HOST)
+	@echo PORT = $(PORT)
+	@echo FREQ = $(FREQ)
+	@echo
 	$(KREC) --help
 
 clean:
