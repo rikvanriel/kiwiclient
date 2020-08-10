@@ -124,7 +124,9 @@ nb:
 2sec:
 	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 debug:
-	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
+#	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
+	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
+#	$(KREC) -s ai -p 8073 -f 10000 --user=wwv1 -m am --tlimit=60 --log-level=debug
 
 
 # S-meter
@@ -225,7 +227,7 @@ gps2:
 # Should playback using standard .wav file player
 
 iq:
-	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10
+	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level info
 
 
 # process waterfall data
