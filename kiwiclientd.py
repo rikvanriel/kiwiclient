@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 ## -*- python -*-
+#
+# Streams sound from a kiwisdr channel to a (virtual or not) sound card,
+# allowing the user to process kiwisdr signals with programs like fldigi,
+# wsjtx, etc.
+# Provides a hamlib rictld backend to change frequency and modulation of
+# the kiwisdr channel.
+#
+# Uses the SoundCard python module, which can stream sound to
+# coreaudio (MacOS), mediafoundation (Windows), and pulseaudio (Linux)
 
 import array, logging, os, struct, sys, time, copy, threading, os
 import gc
