@@ -30,7 +30,7 @@ The data is, at the moment, transferred in uncompressed format. I'll add soon th
 
 ## Guide to the code
 
-### kiwiclient.py
+### kiwi/client.py
 
 Base class for receiving websocket data from a KiwiSDR.
 It provides the following methods which can be used in derived classes:
@@ -44,6 +44,11 @@ It provides the following methods which can be used in derived classes:
 * The complete list of options can be obtained by `python kiwirecorder.py --help`.
 * It is possible to record from more than one KiwiSDR simultaneously, see again `--help`.
 * For recording IQ samples there is the `-w` or `--kiwi-wav` option: this write	a .wav file which includes GNSS	timestamps (see below).
+
+### kiwiclientd.py
+* Stream sound from a kiwisdr channel to a (virtual or not) sound card.
+* Provides a hamlib rigctld interface to control frequency, mode, etc of that kiwisdr channel.
+* Used to feed sound from a kiwisdr to programs like wsjtx, fldigi, multipsk, etc.
 
 ## IQ .wav files with GNSS timestamps
 ### kiwirecorder.py configuration
