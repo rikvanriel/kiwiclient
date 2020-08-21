@@ -118,7 +118,7 @@ class KiwiSDRStreamBase(object):
         self._modulation = None
         self._lowcut = 0
         self._highcut = 0
-        self._frequency = 0
+        self._freq = 0
         self._stream = None
 
     def get_mod(self):
@@ -131,7 +131,7 @@ class KiwiSDRStreamBase(object):
         return self._highcut
 
     def get_frequency(self):
-        return self._frequency
+        return self._freq
 
     def connect(self, host, port):
         # self._prepare_stream(host, port, 'SND')
@@ -199,7 +199,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._modulation = None
         self._lowcut = 0
         self._highcut = 0
-        self._frequency = 0
+        self._freq = 0
         self._compression = True
         self._gps_pos = [0,0]
         self._s_meter_avgs = self._s_meter_cma = 0
@@ -246,7 +246,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
         self._lowcut = lc
         self._highcut = hc
-        self._frequency = freq
+        self._freq = freq
 
     def set_agc(self, on=False, hang=False, thresh=-100, slope=6, decay=1000, gain=50):
         self._send_message('SET agc=%d hang=%d thresh=%d slope=%d decay=%d manGain=%d' % (on, hang, thresh, slope, decay, gain))

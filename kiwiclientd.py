@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 ## -*- python -*-
+#
+# Streams sound from a kiwisdr channel to a (virtual or not) sound card,
+# allowing the user to process kiwisdr signals with programs like fldigi,
+# wsjtx, etc.
+# Provides a hamlib rictld backend to change frequency and modulation of
+# the kiwisdr channel.
+#
+# Uses the SoundCard python module, which can stream sound to
+# coreaudio (MacOS), mediafoundation (Windows), and pulseaudio (Linux)
 
 import array, logging, os, struct, sys, time, copy, threading, os
 import gc
@@ -29,6 +38,9 @@ class KiwiSoundRecorder(KiwiSDRStream):
         options.S_meter = False
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
+        self._modulation = self._options.modulation
+        self._lowcut = self._options.lp_cut
+        self._highcut = self._options.hp_cut
         self._start_ts = None
         self._start_time = None
         self._squelch = Squelch(self._options) if options.thresh is not None else None
@@ -64,13 +76,11 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _setup_rx_params(self):
         self.set_name(self._options.user)
-        mod    = self._options.modulation
-        lp_cut = self._options.lp_cut
-        hp_cut = self._options.hp_cut
-        if mod == 'am':
+        lowcut = self._lowcut
+        if self._modulation == 'am':
             # For AM, ignore the low pass filter cutoff
-            lp_cut = -hp_cut if hp_cut is not None else hp_cut
-        self.set_mod(mod, lp_cut, hp_cut, self._freq)
+            lowcut = -self._highcut if lowcut is not None else lowcut
+        self.set_mod(self._modulation, lowcut, self._highcut, self._freq)
         if self._options.agc_gain != None:
             self.set_agc(on=False, gain=self._options.agc_gain)
         else:
