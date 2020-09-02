@@ -50,6 +50,7 @@ It provides the following methods which can be used in derived classes:
 * The complete list of options can be obtained by `python kiwirecorder.py --help`.
 * It is possible to record from more than one KiwiSDR simultaneously, see again `--help`.
 * For recording IQ samples there is the `-w` or `--kiwi-wav` option: this write	a .wav file which includes GNSS	timestamps (see below).
+* AGC options can be specified in a YAML-formatted file, `--agc-yaml` option, see `default_agc.yaml`.
 
 ## IQ .wav files with GNSS timestamps
 ### kiwirecorder.py configuration
