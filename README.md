@@ -14,8 +14,8 @@ On many Linux distributions the command would be similar to `'apt install python
 
 The following demo programs are provided. Use the `--help` argument to see all program options.
 
-* `kiwirecorder`: Record audio to WAV files, with squelch.
-* `kiwiwfrecorder`: Prints various waterfall statistics.
+* `kiwirecorder`: Record audio to WAV files, with squelch. Option `--wf` prints various waterfall statistics.
+* `kiwiwfrecorder`: Specialty program. Saves waterfall data and GPS timestamps to .npy format file.
 * `kiwifax`: Decode radiofax and save as PNGs, with auto start, stop, and phasing.
 * `kiwiclientd`: Plays Kiwi audio on sound cards (real & virtual) for use by programs like fldigi and wsjtx.  
     Implements hamlib rigctl network interface so the Kiwi freq & mode can be controlled by these programs.
