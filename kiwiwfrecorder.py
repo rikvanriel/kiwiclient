@@ -165,6 +165,9 @@ def main():
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
                       help='Kiwi login password')
+    parser.add_option('--tlimit-pw', '--tlimit-password',
+                      dest='tlimit_password', type='string', default='',
+                      help='Connect time limit exemption password (if required)')
     parser.add_option('-u', '--user',
                       dest='user', type='string', default='kiwirecorder.py',
                       help='Kiwi connection user name')

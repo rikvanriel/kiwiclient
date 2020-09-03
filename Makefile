@@ -162,7 +162,7 @@ smsi:
 # TDoA debugging
 
 tdoa:
-	python -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=30 -u krec-TDoA
+	python -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
 
 
 # test reported problem situations
@@ -234,6 +234,8 @@ iq:
 
 wf:
 	$(KREC) --wf $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
+wf2:
+	python kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
 
 micro:
 	python microkiwi_waterfall.py $(HP) -z 0 -o 0
@@ -259,7 +261,7 @@ help h:
 	$(KREC) --help
 
 clean:
-	-rm -f *.log *.wav *.png
+	-rm -f *.log *.wav *.png *.npy
 
 clean_dist: clean
 	-rm -f *.pyc */*.pyc
