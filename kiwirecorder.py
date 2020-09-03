@@ -10,7 +10,14 @@ from traceback import print_exc
 from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
 from optparse import OptionGroup
-import yaml
+
+HAS_PyYAML = True
+try:
+    ## needed for the --agc-yaml option
+    import yaml
+except ImportError:
+    ## (only) when needed an exception is raised, see below
+    HAS_PyYAML = False
 
 HAS_RESAMPLER = True
 try:
@@ -662,16 +669,20 @@ def main():
     ### decode AGC YAML file options
     options.agc_yaml = None
     if options.agc_yaml_file:
-        with open(options.agc_yaml_file) as yaml_file:
-            documents = yaml.full_load(yaml_file)
-            logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
-            try:
-                print(documents['AGC'])
+        try:
+            if not HAS_PyYAML:
+                raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            with open(options.agc_yaml_file) as yaml_file:
+                documents = yaml.full_load(yaml_file)
+                logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
                 logging.debug('Got AGC paramteres from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
                 options.agc_yaml = documents['AGC']
-            except KeyError:
-                logging.fatal('malformed YAML file')
-                return
+        except KeyError:
+            logging.fatal('The YAML file does not contain AGC options')
+            return
+        except Exception as e:
+            logging.fatal(e)
+            return
 
 
     options.raw = False
