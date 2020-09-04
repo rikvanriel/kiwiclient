@@ -11,6 +11,14 @@ from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
 from optparse import OptionGroup
 
+HAS_PyYAML = True
+try:
+    ## needed for the --agc-yaml option
+    import yaml
+except ImportError:
+    ## (only) when needed an exception is raised, see below
+    HAS_PyYAML = False
+
 HAS_RESAMPLER = True
 try:
     ## if available use libsamplerate for resampling
@@ -151,9 +159,11 @@ class KiwiSoundRecorder(KiwiSDRStream):
             # For AM, ignore the low pass filter cutoff
             lp_cut = -hp_cut if hp_cut is not None else hp_cut
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
-        if self._options.agc_gain != None:
+        if self._options.agc_gain != None: ## fixed gain (no AGC)
             self.set_agc(on=False, gain=self._options.agc_gain)
-        else:
+        elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
+            self.set_agc(**self._options.agc_yaml)
+        else: ## default is AGC ON (with default parameters)
             self.set_agc(on=True)
         if self._options.compression is False:
             self._set_snd_comp(False)
@@ -570,6 +580,11 @@ def main():
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    group.add_option('--agc-yaml',
+                      dest='agc_yaml_file',
+                      type='string',
+                      default=None,
+                      help='AGC options provided in a YAML-formatted file')
     group.add_option('--nb',
                       dest='nb',
                       action='store_true', default=False,
@@ -630,7 +645,7 @@ def main():
 
     ## clean up OptionParser which has cyclic references
     parser.destroy()
-    
+
     if options.krec_version:
         print('kiwirecorder v1.0')
         sys.exit()
@@ -650,6 +665,25 @@ def main():
 
     if options.tlimit is not None and options.dt != 0:
         print('Warning: --tlimit ignored when --dt-sec option used')
+
+    ### decode AGC YAML file options
+    options.agc_yaml = None
+    if options.agc_yaml_file:
+        try:
+            if not HAS_PyYAML:
+                raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            with open(options.agc_yaml_file) as yaml_file:
+                documents = yaml.full_load(yaml_file)
+                logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
+                logging.debug('Got AGC paramteres from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
+                options.agc_yaml = documents['AGC']
+        except KeyError:
+            logging.fatal('The YAML file does not contain AGC options')
+            return
+        except Exception as e:
+            logging.fatal(e)
+            return
+
 
     options.raw = False
     options.rigctl_enabled = False

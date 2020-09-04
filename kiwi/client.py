@@ -249,6 +249,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._freq = freq
 
     def set_agc(self, on=False, hang=False, thresh=-100, slope=6, decay=1000, gain=50):
+        logging.debug('set_agc: on=%s hang=%s thresh=%d slope=%d decay=%d gain=%d' % (on, hang, thresh, slope, decay, gain))
         self._send_message('SET agc=%d hang=%d thresh=%d slope=%d decay=%d manGain=%d' % (on, hang, thresh, slope, decay, gain))
 
     def set_squelch(self, sq, thresh):

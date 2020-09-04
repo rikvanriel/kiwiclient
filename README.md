@@ -17,7 +17,7 @@ The following demo programs are provided. Use the `--help` argument to see all p
 * `kiwirecorder`: Record audio to WAV files, with squelch. Option `--wf` prints various waterfall statistics.
 * `kiwiwfrecorder`: Specialty program. Saves waterfall data and GPS timestamps to .npy format file.
 * `kiwifax`: Decode radiofax and save as PNGs, with auto start, stop, and phasing.
-* `kiwiclientd`: Plays Kiwi audio on sound cards (real & virtual) for use by programs like fldigi and wsjtx.  
+* `kiwiclientd`: Plays Kiwi audio on sound cards (real & virtual) for use by programs like fldigi and wsjtx.
     Implements hamlib rigctl network interface so the Kiwi freq & mode can be controlled by these programs.
 * `kiwi_nc`: Command line pipeline tool in the style of `netcat` (unfinished).
 
@@ -50,6 +50,7 @@ It provides the following methods which can be used in derived classes:
 * The complete list of options can be obtained by `python kiwirecorder.py --help`.
 * It is possible to record from more than one KiwiSDR simultaneously, see again `--help`.
 * For recording IQ samples there is the `-w` or `--kiwi-wav` option: this write	a .wav file which includes GNSS	timestamps (see below).
+* AGC options can be specified in a YAML-formatted file, `--agc-yaml` option, see `default_agc.yaml`. Note that this option needs PyYAML to be installed
 
 ## IQ .wav files with GNSS timestamps
 ### kiwirecorder.py configuration
@@ -60,4 +61,3 @@ It provides the following methods which can be used in derived classes:
 ### Working with the recorded .wav files
 * There is an octave extension for reading such WAV files, see `read_kiwi_wav.cc` where the details of the non-standard WAV chunk can be found; it needs to be compiled in this way `mkoctfile read_kiwi_wav.cc`.
 * For using read_kiwi_wav an octave function `proc_kiwi_iq_wav.m` is provided; type `help proc_kiwi_iq_wav` in octave for documentation.
-
