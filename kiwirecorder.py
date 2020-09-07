@@ -15,6 +15,9 @@ HAS_PyYAML = True
 try:
     ## needed for the --agc-yaml option
     import yaml
+    if yaml.__version__.split('.')[0] != '5':
+        logging.fatal('wrong PyYaml version: pip install pyaml / pip3 install pyyaml (NO SUDO)')
+        raise ImportError
 except ImportError:
     ## (only) when needed an exception is raised, see below
     HAS_PyYAML = False
