@@ -16,7 +16,7 @@ try:
     ## needed for the --agc-yaml option
     import yaml
     if yaml.__version__.split('.')[0] != '5':
-        logging.fatal('wrong PyYaml version: pip install pyaml / pip3 install pyyaml (NO SUDO)')
+        print('wrong PyYAML version: %s != 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
         raise ImportError
 except ImportError:
     ## (only) when needed an exception is raised, see below
