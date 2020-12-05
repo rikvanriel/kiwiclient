@@ -16,7 +16,7 @@ try:
     ## needed for the --agc-yaml option
     import yaml
     if yaml.__version__.split('.')[0] != '5':
-        logging.fatal('wrong PyYaml version: pip install pyaml / pip3 install pyyaml (NO SUDO)')
+        print('wrong PyYAML version: %s != 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
         raise ImportError
 except ImportError:
     ## (only) when needed an exception is raised, see below
@@ -182,12 +182,23 @@ class KiwiSoundRecorder(KiwiSDRStream):
         if self._squelch:
             self._squelch.set_sample_rate(self._sample_rate)
         if self._options.resample > 0:
-            self._output_sample_rate = self._options.resample
-            self._ratio = float(self._output_sample_rate)/self._sample_rate
-            logging.info('resampling from %g to %d Hz (ratio=%f)' % (self._sample_rate, self._options.resample, self._ratio))
             if not HAS_RESAMPLER:
+                self._output_sample_rate = self._options.resample
+                self._ratio = float(self._output_sample_rate)/self._sample_rate
                 logging.info("libsamplerate not available: linear interpolation is used for low-quality resampling. "
-                             "(pip install samplerate)")
+                             "(pip/pip3 install samplerate)")
+                logging.info('resampling from %g to %d Hz (ratio=%f)' % (self._sample_rate, self._options.resample, self._ratio))
+            else:
+                fs = 10*round(self._sample_rate/10) ## rounded sample rate
+                ratio = self._options.resample / fs
+                ## work around a bug in python-libsamplerate:
+                ##  the following makes sure that ratio * 512 is an integer
+                ##  at the expense of resampling frequency precision for some resampling frequencies (it's ok for 375 Hz)
+                n = 512 ## KiwiSDR block length for samples
+                m = round(ratio*n)
+                self._ratio = m/n
+                self._output_sample_rate = self._ratio * self._sample_rate
+                logging.info('resampling from %g to %g Hz (ratio=%f)' % (self._sample_rate, self._output_sample_rate, self._ratio))
 
     def _process_audio_samples(self, seq, samples, rssi):
         if self._options.quiet is False:
@@ -237,7 +248,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 if self._resampler is None:
                     self._resampler = Resampler(channels=2, converter_type='sinc_best')
                 s = self._resampler.process(s.reshape(len(samples),2), ratio=self._ratio)
-                s = np.round(s.reshape(1, np.size(s))).astype(np.int16)
+                s = np.round(s.flatten()).astype(np.int16)
             else:
                 ## resampling by linear interpolation
                 n  = len(samples)
