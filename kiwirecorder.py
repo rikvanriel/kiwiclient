@@ -30,6 +30,8 @@ except ImportError:
     ## otherwise linear interpolation is used
     HAS_RESAMPLER = False
 
+if os.environ['USE_LIBSAMPLERATE'] == 'False':
+    HAS_RESAMPLER = False
 
 def _write_wav_header(fp, filesize, samplerate, num_channels, is_kiwi_wav):
     fp.write(struct.pack('<4sI4s', b'RIFF', filesize - 8, b'WAVE'))
