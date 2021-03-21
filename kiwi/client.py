@@ -297,6 +297,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._compression = comp
         self._send_message('SET compression=%d' % (1 if comp else 0))
 
+    def _set_stats(self):
+        self._send_message('SET STATS_UPD ch=0')
+
     def _set_wf_comp(self, comp):
         self._compression = comp
         self._send_message('SET wf_comp=%d' % (1 if comp else 0))

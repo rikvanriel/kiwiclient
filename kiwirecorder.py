@@ -99,7 +99,7 @@ class GNSSPerformance(object):
 class Squelch(object):
     def __init__(self, options):
         self._status_msg  = not options.quiet
-        self._threshold   = options.thresh
+        self._threshold   = options.sq_thresh
         self._squelch_tail = options.squelch_tail ## in seconds
         self._ring_buffer = RingBuffer(65)
         self._squelch_on_seq = None
@@ -143,7 +143,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._freq = freq
         self._start_ts = None
         self._start_time = None
-        self._squelch = Squelch(self._options) if options.thresh is not None else None
+        self._squelch = Squelch(self._options) if options.sq_thresh is not None else None
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
@@ -174,10 +174,10 @@ class KiwiSoundRecorder(KiwiSDRStream):
             gate = self._options.nb_gate
             if gate < 100 or gate > 5000:
                 gate = 100
-            thresh = self._options.nb_thresh
-            if thresh < 0 or thresh > 100:
-                thresh = 50
-            self.set_noise_blanker(gate, thresh)
+            nb_thresh = self._options.nb_thresh
+            if nb_thresh < 0 or nb_thresh > 100:
+                nb_thresh = 50
+            self.set_noise_blanker(gate, nb_thresh)
         self._output_sample_rate = self._sample_rate
         if self._squelch:
             self._squelch.set_sample_rate(self._sample_rate)
@@ -188,6 +188,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if not HAS_RESAMPLER:
                 logging.info("libsamplerate not available: linear interpolation is used for low-quality resampling. "
                              "(pip install samplerate)")
+        if self._options.test_mode:
+            self._set_stats()
 
     def _process_audio_samples(self, seq, samples, rssi):
         if self._options.quiet is False:
@@ -568,7 +570,7 @@ def main():
                       type='int', default=0,
                       help='Resample output file to new sample rate in Hz. The resampling ratio has to be in the range [1/256,256]')
     group.add_option('-T', '--squelch-threshold',
-                      dest='thresh',
+                      dest='sq_thresh',
                       type='float', default=None,
                       help='Squelch threshold, in dB.')
     group.add_option('--squelch-tail',

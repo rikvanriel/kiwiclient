@@ -124,8 +124,8 @@ nb:
 2sec:
 	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 debug:
-#	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
-	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
+	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
+#	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
 #	$(KREC) -s ai -p 8073 -f 10000 --user=wwv1 -m am --tlimit=60 --log-level=debug
 
 
@@ -228,6 +228,31 @@ gps2:
 
 iq:
 	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level info
+
+
+# time stations
+
+BPC_HOST = -s railgun.proxy.kiwisdr.com -p 8073
+bpc:
+#	$(KREC) $(BPC_HOST) -f 68 -m iq -L 470 -H 530 --fn=BPC_cwn60_iq --tlimit=665 --log_level info
+	$(KREC) $(BPC_HOST) -f 68 -m iq -L 470 -H 530 --fn=BPC_cwn60_iq --tlimit=195 --log_level info
+
+#JJY_HOST = -s railgun.proxy.kiwisdr.com -p 8073
+JJY_HOST = -s 202.127.177.27 -p 8074
+jjy:
+	$(KREC) $(JJY_HOST) -f 39.5 -m iq -L 470 -H 530 --fn=JJY_cwn60_iq --tlimit=195 --log_level info
+
+RTZ_HOST = -s irk.proxy.kiwisdr.com -p 8073
+rtz:
+	$(KREC) $(RTZ_HOST) -f 49.6 -m iq -L 485 -H 515 --fn=RTZ_cwn30_iq --tlimit=195 --log_level info
+
+MSF_HOST = -s stucapon.plus.com -p 8073
+msf:
+	$(KREC) $(MSF_HOST) -f 59.5 -m iq -L 470 -H 530 --fn=MSF_cwn60_iq --tlimit=15 --log_level info
+
+WWVB_HOST = -s lounix.net -p 8073
+wwvb:
+	$(KREC) $(WWVB_HOST) -f 59.5 -m iq -L 497 -H 503 --fn=WWVB_cwn6_iq --tlimit=195 --log_level info
 
 
 # process waterfall data
