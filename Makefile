@@ -2,6 +2,9 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
+#PY = python2
+PY = python3
+
 # set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
 ifeq ($(KIWI_HOST)x,x)
     HOST = kiwisdr.local
@@ -21,7 +24,7 @@ else
     FREQ = $(KIWI_FREQ)
 endif
 
-KREC = python kiwirecorder.py
+KREC = $(PY) kiwirecorder.py
 
 HP = -s $(HOST) -p $(PORT)
 H2 = -s $(HOST),$(HOST) -p $(PORT)
@@ -92,9 +95,9 @@ dream_real:
 # has both real and IQ mode decoding
 
 fax:
-	python kiwifax.py $(HP) -f $(FREQ) -F
+	$(PY) kiwifax.py $(HP) -f $(FREQ) -F
 faxiq:
-	python kiwifax.py $(HP) -f $(FREQ) -F --iq-stream
+	$(PY) kiwifax.py $(HP) -f $(FREQ) -F --iq-stream
 
 
 # Two separate IQ files recording in parallel
@@ -162,7 +165,7 @@ smsi:
 # TDoA debugging
 
 tdoa:
-	python -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
+	$(PY) -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
 
 
 # test reported problem situations
@@ -260,22 +263,22 @@ wwvb:
 wf:
 	$(KREC) --wf $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
 wf2:
-	python kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
+	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
 
 micro:
-	python microkiwi_waterfall.py $(HP) -z 0 -o 0
+	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 0
 
 
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
-	python kiwi_nc.py $(HP) $(F_PB) -m am --progress
+	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress
 
 tun:
 	mkfifo /tmp/si /tmp/so
 	nc -l localhost 1234 >/tmp/si </tmp/so &
 	ssh -f -4 -p 1234 -L 2345:localhost:8073 root@$(HOST) sleep 600 &
-	python kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
+	$(PY) kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
 
 
 help h:
