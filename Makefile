@@ -2,8 +2,9 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
+PY = python
 #PY = python2
-PY = python3
+#PY = python3
 
 # set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
 ifeq ($(KIWI_HOST)x,x)
