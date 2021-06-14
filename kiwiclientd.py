@@ -66,7 +66,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         # pulseaudio has sporadic failures, retry a few times
         for i in range(0,10):
             try:
-                self._player = speaker.player(samplerate=rate, blocksize=4096)
+                self._player = speaker.player(samplerate=rate)
                 self._player.__enter__()
                 break
             except Exception as ex:
@@ -131,7 +131,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._player.play(fsamples)
 
     def _on_sample_rate_change(self):
-        if self._options.resample is 0:
+        if not self._options.resample:
             # if self._output_sample_rate == int(self._sample_rate):
             #    return
             # reinitialize player if the playback sample rate changed
