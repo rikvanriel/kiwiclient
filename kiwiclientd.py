@@ -36,6 +36,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._type = 'SND'
         freq = options.frequency
         options.S_meter = False
+        options.stats = False
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
         self._modulation = self._options.modulation
@@ -66,7 +67,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         # pulseaudio has sporadic failures, retry a few times
         for i in range(0,10):
             try:
-                self._player = speaker.player(samplerate=rate, blocksize=4096)
+                self._player = speaker.player(samplerate=rate)
                 self._player.__enter__()
                 break
             except Exception as ex:
@@ -131,7 +132,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._player.play(fsamples)
 
     def _on_sample_rate_change(self):
-        if self._options.resample is 0:
+        if not self._options.resample:
             # if self._output_sample_rate == int(self._sample_rate):
             #    return
             # reinitialize player if the playback sample rate changed
@@ -375,14 +376,9 @@ def main():
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(options.log_level.upper()), format=FORMAT)
-    if options.log_level.upper() == 'DEBUG':
-        gc.set_debug(gc.DEBUG_SAVEALL | gc.DEBUG_LEAK | gc.DEBUG_UNCOLLECTABLE)
 
     run_event = threading.Event()
     run_event.set()
-
-    if options.tlimit is not None and options.dt != 0:
-        print('Warning: --tlimit ignored when --dt-sec option used')
 
     options.sdt = 0
     options.dir = None
@@ -424,8 +420,6 @@ def main():
         run_event.clear()
         join_threads(snd_recorders)
         print("Exception: threads successfully closed")
-
-    logging.debug('gc %s' % gc.garbage)
 
 if __name__ == '__main__':
     #import faulthandler

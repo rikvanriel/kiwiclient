@@ -6,6 +6,7 @@ import socket
 import struct
 import time
 import numpy as np
+
 try:
     import urllib.parse as urllib
 except ImportError:
@@ -287,6 +288,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         start_frequency = counter * self.MAX_FREQ / self.WF_BINS / 2**self.MAX_ZOOM
         return counter,start_frequency
 
+    # deprecated
     def _set_zoom_start(self, zoom, start):
         self._send_message('SET zoom=%d start=%f' % (zoom, start))
 
@@ -304,8 +306,13 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._compression = comp
         self._send_message('SET wf_comp=%d' % (1 if comp else 0))
 
-    def _set_wf_speed(self, wf_speed):
-        self._send_message('SET wf_speed=%d' % wf_speed)
+    def _set_wf_speed(self, speed):
+        assert(speed >= 1 and speed <= 4)
+        self._send_message('SET wf_speed=%d' % speed)
+
+    def _set_wf_interp(self, interp):
+        assert((interp >= 0 and interp <= 4) or (interp >=10 and interp <= 14))
+        self._send_message('SET interp=%d' % interp)
 
     def _process_msg_param(self, name, value):
         if name == 'load_cfg':
@@ -337,6 +344,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._setup_rx_params()
             # Also send a keepalive
             self._set_keepalive()
+        elif name == 'bandwidth':
+            self.MAX_FREQ = float(value)/1000       # allows e.g. 32 MHz Kiwis
         elif name == 'wf_setup':
             # Required to get rolling
             self._setup_rx_params()
@@ -350,6 +359,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._version_minor = int(value)
             if self._options.idx == 0 and self._version_major is not None and self._version_minor is not None:
                 logging.info("Server version: %d.%d", self._version_major, self._version_minor)
+        elif name == 'ext_client_init':
+            logging.info("ext_client_init=%s", value)
+            self._setup_rx_params()
 
     def _process_message(self, tag, body):
         if tag == 'MSG':
@@ -365,6 +377,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._process_wf(body[1:]) ## skip 1st byte
             # Ensure we don't get kicked due to timeouts
             self._set_keepalive()
+        elif tag == 'EXT':
+            logging.info("recv EXT      %s", body)
         else:
             logging.warn("unknown tag %s" % tag)
             pass
@@ -467,7 +481,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _process_wf(self, body):
         x_bin_server,flags_x_zoom_server,seq, = struct.unpack('<III', buffer(body[0:12]))
         data = body[12:]
-        logging.info("W/F seq %d len %d" % (seq, len(data)))
+        #logging.info("W/F seq %d len %d" % (seq, len(data)))
         if self._options.raw is True:
             return self._process_waterfall_samples_raw(data, seq)
         if self._compression:
@@ -497,7 +511,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if self._type == 'W/F':
             self._set_zoom_cf(0, 0)
             self._set_maxdb_mindb(-10, -110)
-            self._set_wf_speed(1)
+            self._set_wf_speed(1)       # 1 Hz
+            self._set_wf_interp(13)     # drop sampling + CIC compensation (Kiwi UI default)
         if self._type == 'SND':
             self._set_mod('am', 100, 2800, 4625.0)
             self._set_agc(True)
@@ -506,7 +521,11 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         pass
 
     def open(self):
-        if self._type == 'SND' or self._type == 'W/F':
+        if self._type == 'SND' or self._type == 'W/F' or self._type == 'EXT':
+            # "SET options=" must be sent before auth
+            if 'self._options.nolocal' in locals():
+                if self._options.nolocal:
+                    self._send_message('SET options=1')
             self._set_auth('kiwi', self._options.password, self._options.tlimit_password)
 
     def close(self):

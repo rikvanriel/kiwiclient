@@ -2,9 +2,9 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
-PY = python
+#PY = python
 #PY = python2
-#PY = python3
+PY = python3
 
 # set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
 ifeq ($(KIWI_HOST)x,x)
@@ -85,6 +85,19 @@ drm-1368:
 	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 1368 $(DRM) --filename=Delhi.1368.12k.iq
 drm-621:
 	$(KREC) -s bengaluru.twrmon.net -p 8073 -f 621 $(DRM) --filename=Bengaluru.621.12k.iq
+
+#HP_DRM_BUG = -s www -p 8073
+HP_DRM_BUG = -s du6_pe1nsq.proxy.kiwisdr.com -p 8073
+#EXT = DRM
+EXT = SSTV
+
+drm-bug:
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=40 --test-mode --log_level=debug --snd --wf
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=4 --test-mode --log_level=debug
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --wf
+	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --snd --wf
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --nolocal
+
 
 # see if Dream works using a real-mode stream (it does)
 # requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
@@ -234,6 +247,20 @@ iq:
 	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level info
 
 
+# ALE 2G testing
+P_ALE = -f 2784 -m usb -L 300 -H 2700 --station=ALE --resample 8000 
+
+ale:
+	$(KREC) $(HP) $(P_ALE) --log_level debug --tlimit=5
+#	$(KREC) $(HP) $(P_ALE) --log_level=debug --tlimit=5 --test-mode --ext ale_2g --snd --wf
+
+
+# kiwiclientd
+kcd:
+#	$(PY) kiwiclientd.py $(HP) -f 8906 -m usb --snddev="Display Audio" --rigctl-port=6400
+	$(PY) kiwiclientd.py $(HP) -f 8906 -m usb --rigctl-port=6400 --log_level info --tlimit=5
+
+
 # time stations
 
 BPC_HOST = -s railgun.proxy.kiwisdr.com -p 8073
@@ -262,9 +289,12 @@ wwvb:
 # process waterfall data
 
 wf:
-	$(KREC) --wf $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
+#	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 --cal=-13
+
 wf2:
-	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
+	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=5
 
 micro:
 	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 0

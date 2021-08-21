@@ -361,9 +361,18 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         #self._set_wf_comp(True)
         self._set_wf_comp(False)
-        self._set_wf_speed(1)   # 1 Hz update
+        self._set_wf_speed(self._options.speed)
+        self._set_wf_interp(self._options.interp)
         self.set_name(self._options.user)
         self._start_time = time.time()
+        span = self.zoom_to_span(self._options.zoom)
+        start = self._freq - span/2
+        stop  = self._freq + span/2
+        if start < 0 or stop > self.MAX_FREQ:
+            s = "Frequency and zoom values result in span outside 0 - %d kHz range" % (self.MAX_FREQ)
+            raise Exception(s)
+        logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
+              % (start, self._freq, stop, span, span/self.WF_BINS, self._options.cal))
 
     def _process_waterfall_samples(self, seq, samples):
         nbins = len(samples)
@@ -376,13 +385,34 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             if s > max:
                 max = s
                 bmax = i
-            if s < min:
+            if s < min and i > 2:   # skip DC offset notch in first two bins
                 min = s
                 bmin = i
             i += 1
-        span = 30000
-        logging.info("wf samples %d bins %d..%d dB %.1f..%.1f kHz rbw %d kHz"
-              % (nbins, min-255, max-255, span*bmin/bins, span*bmax/bins, span/bins))
+        span = self.zoom_to_span(self._options.zoom)
+        start = self._freq - span/2
+        logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
+              % (nbins, min-255 + self._options.cal, start + span*bmin/bins, max-255 + self._options.cal, start + span*bmax/bins))
+
+class KiwiExtensionRecorder(KiwiSDRStream):
+    def __init__(self, options):
+        super(KiwiExtensionRecorder, self).__init__()
+        self._options = options
+        self._type = 'EXT'
+        logging.info("%s:%s EXT init" % (options.server_host, options.server_port))
+        self._freq = None
+        self._start_ts = None
+        self._start_time = None
+        self._num_channels = 1
+
+    def _setup_rx_params(self):
+        logging.info("EXT setup_rx_params()")
+        self.set_name(self._options.user)
+        logging.info("CAUTION: rx_chan=0 assumed!")
+        self._send_message('SET ext_switch_to_client=%s first_time=1 rx_chan=0' % (self._options.extension))
+        if (self._options.extension == 'DRM'):
+            self._send_message('SET lock_set')
+        self._start_time = time.time()
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
@@ -410,9 +440,10 @@ def get_comma_separated_args(option, opt, value, parser, fn):
     setattr(parser.values, option.dest, values)
 ##    setattr(parser.values, option.dest, map(fn, value.split(',')))
 
-def join_threads(snd, wf):
+def join_threads(snd, wf, ext):
     [r._event.set() for r in snd]
     [r._event.set() for r in wf]
+    [r._event.set() for r in ext]
     [t.join() for t in threading.enumerate() if t is not threading.currentThread()]
 
 def main():
@@ -655,6 +686,33 @@ def main():
     group.add_option('-z', '--zoom',
                       dest='zoom', type='int', default=0,
                       help='Zoom level 0-14')
+    group.add_option('--speed',
+                      dest='speed', type='int', default=1,
+                      help='Waterfall update speed: 1=1Hz, 2=slow, 3=med, 4=fast')
+    group.add_option('--cal',
+                      dest='cal', type='int', default=0,
+                      help='Waterfall calibration correction value.')
+    group.add_option('--interp',
+                      dest='interp', type='int', default=13,
+                      help='Waterfall display interpolation 0-13')
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "KiwiSDR development options", "")
+    group.add_option('--gc',
+                      dest='gc_stats',
+                      default=False,
+                      action='store_true',
+                      help='Print garbage collection stats')
+    group.add_option('--ext',
+                      dest='extension',
+                      default=None,
+                      type='string',
+                      help='Also open a connection to EXTENSION name')
+    group.add_option('--nolocal',
+                      dest='nolocal',
+                      default=False,
+                      action='store_true',
+                      help='Make local network connections appear non-local')
     parser.add_option_group(group)
 
     (options, unused_args) = parser.parse_args()
@@ -668,7 +726,7 @@ def main():
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(options.log_level.upper()), format=FORMAT)
-    if options.log_level.upper() == 'DEBUG':
+    if options.gc_stats:
         gc.set_debug(gc.DEBUG_SAVEALL | gc.DEBUG_LEAK | gc.DEBUG_UNCOLLECTABLE)
 
     run_event = threading.Event()
@@ -720,6 +778,13 @@ def main():
             opt.idx = i
             wf_recorders.append(KiwiWorker(args=(KiwiWaterfallRecorder(opt),opt,run_event)))
 
+    ext_recorders = []
+    if gopt.extension is not None:
+        for i,opt in enumerate(options):
+            opt.multiple_connections = multiple_connections
+            opt.idx = i
+            ext_recorders.append(KiwiWorker(args=(KiwiExtensionRecorder(opt),opt,run_event)))
+
     try:
         for i,r in enumerate(snd_recorders):
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
@@ -734,17 +799,23 @@ def main():
             r.start()
             logging.info("started waterfall recorder %d" % i)
 
+        for i,r in enumerate(ext_recorders):
+            if i!=0 and options[i-1].server_host == options[i].server_host:
+                time.sleep(opt.launch_delay)
+            r.start()
+            logging.info("started extension recorder %d" % i)
+
         while run_event.is_set():
             time.sleep(.1)
 
     except KeyboardInterrupt:
         run_event.clear()
-        join_threads(snd_recorders, wf_recorders)
+        join_threads(snd_recorders, wf_recorders, ext_recorders)
         print("KeyboardInterrupt: threads successfully closed")
     except Exception as e:
         print_exc()
         run_event.clear()
-        join_threads(snd_recorders, wf_recorders)
+        join_threads(snd_recorders, wf_recorders, ext_recorders)
         print("Exception: threads successfully closed")
 
     if gopt.is_kiwi_tdoa:
@@ -752,7 +823,8 @@ def main():
           # NB: MUST be a print (i.e. not a logging.info)
           print("status=%d,%d" % (i, opt.status))
 
-    logging.debug('gc %s' % gc.garbage)
+    if gopt.gc_stats:
+        logging.debug('gc %s' % gc.garbage)
 
 if __name__ == '__main__':
     #import faulthandler

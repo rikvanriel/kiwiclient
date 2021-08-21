@@ -55,8 +55,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._num_skip = 2 ## skip data at the start of the WS stream with seq < 2
 
     def _setup_rx_params(self):
-        counter,self._freq = self.start_frequency_to_counter(self._freq)
-        self._set_zoom_start(self._zoom, counter)
+        self._set_zoom_cf(self._zoom, self._freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         self._freq_bins = self._freq + (0.5+np.arange(self.WF_BINS))/self.WF_BINS * self.zoom_to_span(self._options.zoom)
         #self._set_wf_comp(True)
