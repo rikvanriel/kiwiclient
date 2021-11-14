@@ -114,17 +114,10 @@ class KiwiNetcat(KiwiSDRStream):
                     return
             self._write_samples(samples, {})
 
-    def _process_iq_samples_raw(self, seq, samples, rssi, gps):
-        if self._squelch:
-            is_open = self._squelch.process(seq, rssi)
-            if not is_open:
-                self._start_ts = None
-                self._start_time = None
-                return
-        s = array.array('h')
-        for x in [[y.real, y.imag] for y in samples]:
-            s.extend(map(int, x))
-        self._write_samples(s, gps)
+    def _process_iq_samples_raw(self, seq, data):
+        count = len(data) // 2
+        samples = np.ndarray(count, dtype='>h', buffer=data).astype(np.int16)
+        self._write_samples(samples, {})
 
     def _process_waterfall_samples_raw(self, samples, seq):
         if self._options.progress is True:
