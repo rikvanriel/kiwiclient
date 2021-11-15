@@ -317,9 +317,10 @@ def main():
         opt.multiple_connections = multiple_connections
         opt.idx = 0
         nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, True),opt,run_event)))
-        opt.writer_init = False
-        opt.idx = 1
-        nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, False),opt,run_event)))
+        if gopt.admin:
+            opt.writer_init = False
+            opt.idx = 1
+            nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, False),opt,run_event)))
 
     try:
         for i,r in enumerate(nc_inst):

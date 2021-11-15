@@ -303,7 +303,7 @@ micro:
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
-	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress
+	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info
 
 tun:
 	mkfifo /tmp/si /tmp/so
