@@ -303,7 +303,16 @@ micro:
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
-	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info
+	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=5
+
+# Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
+# since dumphfdl does its own filtering. The Kiwi HFDL extension has it so you don't
+# have to listen to noise and interference in the opposite sideband.
+HFDL_HOST = -s stucapon.plus.com -p 8073
+HFDL_FREQ = 5720
+dumphfdl:
+	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) | \
+	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 --centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
 
 tun:
 	mkfifo /tmp/si /tmp/so

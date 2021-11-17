@@ -559,6 +559,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         tlimit = self._options.tlimit
         time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
         if time_limit or self._stop:
+            print("\n");
             if self._options.stats and self._tot_meas_count > 0 and self._start_time != None:
                 print("%.1f meas/sec" % (float(self._tot_meas_count) / (time.time() - self._start_time)))
             raise KiwiTimeLimitError('time limit reached')

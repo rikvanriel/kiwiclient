@@ -749,7 +749,7 @@ def main():
             with open(options.agc_yaml_file) as yaml_file:
                 documents = yaml.full_load(yaml_file)
                 logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
-                logging.debug('Got AGC paramteres from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
+                logging.debug('Got AGC parameters from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
                 options.agc_yaml = documents['AGC']
         except KeyError:
             logging.fatal('The YAML file does not contain AGC options')
@@ -757,7 +757,6 @@ def main():
         except Exception as e:
             logging.fatal(e)
             return
-
 
     options.raw = False
     options.rigctl_enabled = False

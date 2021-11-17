@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 ## -*- python -*-
 
+##
+## FIXME: should support the usual suspects:
+##  IQ-swap, endian-reversal, resampling? (e.g. see kiwirecorder),
+##  option to include GPS data, ...
+##
+
 import array, logging, os, struct, sys, time, copy, threading, os
 import gc
 import numpy as np
@@ -9,6 +15,17 @@ from copy import copy
 from traceback import print_exc
 from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
+
+HAS_PyYAML = True
+try:
+    ## needed for the --agc-yaml option
+    import yaml
+    if yaml.__version__.split('.')[0] != '5':
+        print('wrong PyYAML version: %s != 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
+        raise ImportError
+except ImportError:
+    ## (only) when needed an exception is raised, see below
+    HAS_PyYAML = False
 
 class RingBuffer(object):
     def __init__(self, len):
@@ -73,7 +90,9 @@ class KiwiNetcat(KiwiSDRStream):
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
         self._start_ts = None
-        self._start_time = None
+        #self._start_time = None
+        self._start_time = time.time()
+        self._options.stats = None
         self._squelch = Squelch(self._options) if options.thresh is not None else None
         self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
@@ -89,9 +108,11 @@ class KiwiNetcat(KiwiSDRStream):
                 # For AM, ignore the low pass filter cutoff
                 lp_cut = -hp_cut
             self.set_mod(mod, lp_cut, hp_cut, self._freq)
-            if self._options.agc_gain != None:
+            if self._options.agc_gain != None: ## fixed gain (no AGC)
                 self.set_agc(on=False, gain=self._options.agc_gain)
-            else:
+            elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
+                self.set_agc(**self._options.agc_yaml)
+            else: ## default is AGC ON (with default parameters)
                 self.set_agc(on=True)
             if self._options.compression is False:
                 self._set_snd_comp(False)
@@ -278,6 +299,11 @@ def main():
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    parser.add_option('--agc-yaml',
+                      dest='agc_yaml_file',
+                      type='string',
+                      default=None,
+                      help='AGC options provided in a YAML-formatted file')
     parser.add_option('--wf', '--waterfall',
                       dest='waterfall',
                       default=False,
@@ -300,6 +326,24 @@ def main():
 
     run_event = threading.Event()
     run_event.set()
+
+    ### decode AGC YAML file options
+    options.agc_yaml = None
+    if options.agc_yaml_file:
+        try:
+            if not HAS_PyYAML:
+                raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            with open(options.agc_yaml_file) as yaml_file:
+                documents = yaml.full_load(yaml_file)
+                logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
+                logging.debug('Got AGC parameters from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
+                options.agc_yaml = documents['AGC']
+        except KeyError:
+            logging.fatal('The YAML file does not contain AGC options')
+            return
+        except Exception as e:
+            logging.fatal(e)
+            return
 
     options.raw = True
     options.S_meter = -1
