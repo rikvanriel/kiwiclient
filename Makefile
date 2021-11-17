@@ -303,16 +303,25 @@ micro:
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
-	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=5
+#	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=3
+#	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
+	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
 
 # Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
-# since dumphfdl does its own filtering. The Kiwi HFDL extension has it so you don't
-# have to listen to noise and interference in the opposite sideband.
+# since dumphfdl does its own filtering. However the Kiwi HFDL extension does have it so you
+# don't have to listen to noise and interference from the opposite sideband.
 HFDL_HOST = -s stucapon.plus.com -p 8073
 HFDL_FREQ = 5720
+
 dumphfdl:
-	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) | \
-	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 --centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
+	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-decay 100 | \
+	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
+	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
+
+dumphfdl_agc_yaml:
+	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-yaml fast_agc.yaml | \
+	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
+	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
 
 tun:
 	mkfifo /tmp/si /tmp/so

@@ -1,0 +1,7 @@
+AGC :
+ 'on':    True ## beware 'on' vs on
+ hang:   False
+ thresh:  -100
+ slope:      6
+ decay:    100
+ gain:      50

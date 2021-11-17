@@ -15,13 +15,14 @@ from copy import copy
 from traceback import print_exc
 from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
+from optparse import OptionGroup
 
 HAS_PyYAML = True
 try:
     ## needed for the --agc-yaml option
     import yaml
-    if yaml.__version__.split('.')[0] != '5':
-        print('wrong PyYAML version: %s != 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
+    if yaml.__version__.split('.')[0] < '5':
+        print('wrong PyYAML version: %s < 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
         raise ImportError
 except ImportError:
     ## (only) when needed an exception is raised, see below
@@ -108,12 +109,16 @@ class KiwiNetcat(KiwiSDRStream):
                 # For AM, ignore the low pass filter cutoff
                 lp_cut = -hp_cut
             self.set_mod(mod, lp_cut, hp_cut, self._freq)
+
             if self._options.agc_gain != None: ## fixed gain (no AGC)
                 self.set_agc(on=False, gain=self._options.agc_gain)
+            if self._options.agc_decay != None: ## AGC on with specified decay
+                self.set_agc(on=True, decay=self._options.agc_decay)
             elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
                 self.set_agc(**self._options.agc_yaml)
             else: ## default is AGC ON (with default parameters)
                 self.set_agc(on=True)
+
             if self._options.compression is False:
                 self._set_snd_comp(False)
         else:   # waterfall
@@ -246,7 +251,7 @@ def main():
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-u', '--user',
-                      dest='user', type='string', default='kiwirecorder.py',
+                      dest='user', type='string', default='kiwi_nc.py',
                       help='Kiwi connection user name',
                       action='callback',
                       callback_args=(str,),
@@ -270,7 +275,7 @@ def main():
                       dest='compression',
                       default=True,
                       action='store_false',
-                      help='Don\'t use audio compression')
+                      help='Don\'t use audio compression (IQ mode never uses compression)')
     parser.add_option('-L', '--lp-cutoff',
                       dest='lp_cut',
                       type='float', default=100,
@@ -299,6 +304,11 @@ def main():
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    parser.add_option('--agc-decay',
+                      dest='agc_decay',
+                      type='int',
+                      default=1000,
+                      help='AGC decay (msec); if set, AGC is turned on')
     parser.add_option('--agc-yaml',
                       dest='agc_yaml_file',
                       type='string',
@@ -309,10 +319,18 @@ def main():
                       default=False,
                       action='store_true',
                       help='Process waterfall data instead of audio')
-    parser.add_option('--admin',
+
+    group = OptionGroup(parser, "KiwiSDR development options", "")
+    group.add_option('--gc-stats',
+                      dest='gc_stats',
+                      default=False,
+                      action='store_true',
+                      help='Print garbage collection stats')
+    group.add_option('--admin',
                       dest='admin',
                       default=False, action='store_true',
                       help='Kiwi connection: admin instead of default audio stream.')
+    parser.add_option_group(group)
 
     (options, unused_args) = parser.parse_args()
 
@@ -321,7 +339,7 @@ def main():
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(options.log_level.upper()), format=FORMAT)
-    if options.log_level.upper() == 'DEBUG':
+    if options.gc_stats:
         gc.set_debug(gc.DEBUG_SAVEALL | gc.DEBUG_LEAK | gc.DEBUG_UNCOLLECTABLE)
 
     run_event = threading.Event()
@@ -387,7 +405,8 @@ def main():
         join_threads(nc_inst)
         print("Exception: threads successfully closed")
 
-    logging.debug('gc %s' % gc.garbage)
+    if gopt.gc_stats:
+        logging.debug('gc %s' % gc.garbage)
 
 if __name__ == '__main__':
     #import faulthandler

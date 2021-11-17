@@ -698,7 +698,7 @@ def main():
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "KiwiSDR development options", "")
-    group.add_option('--gc',
+    group.add_option('--gc-stats',
                       dest='gc_stats',
                       default=False,
                       action='store_true',
