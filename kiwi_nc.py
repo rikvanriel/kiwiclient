@@ -95,7 +95,6 @@ class KiwiNetcat(KiwiSDRStream):
         self._start_time = time.time()
         self._options.stats = None
         self._squelch = Squelch(self._options) if options.thresh is not None else None
-        self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._fp_stdout = os.fdopen(sys.stdout.fileno(), 'wb')
 
@@ -270,7 +269,7 @@ def main():
     parser.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
-                      help='Modulation; one of am, lsb, usb, cw, nbfm, iq')
+                      help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
     parser.add_option('--ncomp', '--no_compression',
                       dest='compression',
                       default=True,

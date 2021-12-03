@@ -113,10 +113,11 @@ class KiwiSDRStreamBase(object):
         self._socket = None
         self._decoder = None
         self._sample_rate = None
-        self._isIQ = False
         self._version_major = None
         self._version_minor = None
         self._modulation = None
+        self._IQ_or_DRM_or_stereo = False
+        self._num_channels = 1
         self._lowcut = 0
         self._highcut = 0
         self._freq = 0
@@ -198,6 +199,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._version_major = None
         self._version_minor = None
         self._modulation = None
+        self._IQ_or_DRM_or_stereo = False
+        self._num_channels = 1
         self._lowcut = 0
         self._highcut = 0
         self._freq = 0
@@ -207,6 +210,25 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._s_meter_valid = False
         self._tot_meas_count = self._meas_count = 0
         self._stop = False
+
+        self._default_passbands = {
+            "am":  [ -4900, 4900 ],
+            "amn": [ -2500, 2500 ],
+            "sam": [ -4900, 4900 ],
+            "sal": [ -4900,    0 ],
+            "sau": [     0, 4900 ],
+            "sas": [ -4900, 4900 ],
+            "qam": [ -4900, 4900 ],
+            "drm": [ -5000, 5000 ],
+            "lsb": [ -2700, -300 ],
+            "lsn": [ -2400, -300 ],
+            "usb": [   300, 2700 ],
+            "usn": [   300, 2400 ],
+            "cw":  [   300,  700 ],
+            "cwn": [   470,  530 ],
+            "nbfm":[ -6000, 6000 ],
+            "iq":  [ -5000, 5000 ]
+        }
 
         self.MAX_FREQ = 30e3 ## in kHz
         self.MAX_ZOOM = 14
@@ -218,32 +240,17 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def set_mod(self, mod, lc, hc, freq):
         mod = mod.lower()
         self._modulation = mod
+        self._IQ_or_DRM_or_stereo = mod in [ "iq", "drm", "sas", "qam" ]
+        self._num_channels = 2 if self._IQ_or_DRM_or_stereo else 1
+        logging.debug('set_mod: IQ_or_DRM_or_stereo=%d num_channels=%d' % (self._IQ_or_DRM_or_stereo, self._num_channels))
+        
         if lc == None or hc == None:
-            if mod == 'am':
-                lc = -6000 if lc == None else lc
-                hc =  6000 if hc == None else hc
+            if mod in self._default_passbands:
+                lc = self._default_passbands[mod][0] if lc == None else lc
+                hc = self._default_passbands[mod][1] if hc == None else hc
             else:
-                if mod == 'lsb':
-                    lc = -2700 if lc == None else lc
-                    hc =  -300 if hc == None else hc
-                else:
-                    if mod == 'usb':
-                        lc =  300 if lc == None else lc
-                        hc = 2700 if hc == None else hc
-                    else:
-                        if mod == 'cw':
-                            lc = 300 if lc == None else lc
-                            hc = 700 if hc == None else hc
-                        else:
-                            if mod == 'nbfm':
-                                lc = -6000 if lc == None else lc
-                                hc =  6000 if hc == None else hc
-                            else:
-                                if mod == 'iq':
-                                    lc = -5000 if lc == None else lc
-                                    hc =  5000 if hc == None else hc
-                                else:
-                                    raise KiwiUnknownModulation('"%s"' % mod)
+                raise KiwiUnknownModulation('"%s"' % mod)
+
         self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
         self._lowcut = lc
         self._highcut = hc
@@ -451,7 +458,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                     if not self._options.sound:
                         return
 
-        if self._modulation == 'iq':
+        if self._IQ_or_DRM_or_stereo:
             gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], struct.unpack('<BBII', buffer(data[0:10]))))
             data = data[10:]
             if self._options.raw is True:
@@ -559,7 +566,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         tlimit = self._options.tlimit
         time_limit = tlimit != None and self._start_time != None and time.time() - self._start_time > tlimit
         if time_limit or self._stop:
-            print("\n");
+            print("\n")
             if self._options.stats and self._tot_meas_count > 0 and self._start_time != None:
                 print("%.1f meas/sec" % (float(self._tot_meas_count) / (time.time() - self._start_time)))
             raise KiwiTimeLimitError('time limit reached')

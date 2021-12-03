@@ -15,8 +15,8 @@ HAS_PyYAML = True
 try:
     ## needed for the --agc-yaml option
     import yaml
-    if yaml.__version__.split('.')[0] != '5':
-        print('wrong PyYAML version: %s != 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
+    if yaml.__version__.split('.')[0] < '5':
+        print('wrong PyYAML version: %s < 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
         raise ImportError
 except ImportError:
     ## (only) when needed an exception is raised, see below
@@ -144,7 +144,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._start_ts = None
         self._start_time = None
         self._squelch = Squelch(self._options) if options.sq_thresh is not None else None
-        self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
         self._gnss_performance = GNSSPerformance()
@@ -155,21 +154,25 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 self.set_name(self._options.user)
             return
         self.set_name(self._options.user)
+
         mod    = self._options.modulation
         lp_cut = self._options.lp_cut
         hp_cut = self._options.hp_cut
-        if mod == 'am':
+        if mod == 'am' or mod == 'amn':
             # For AM, ignore the low pass filter cutoff
             lp_cut = -hp_cut if hp_cut is not None else hp_cut
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
+
         if self._options.agc_gain != None: ## fixed gain (no AGC)
             self.set_agc(on=False, gain=self._options.agc_gain)
         elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
             self.set_agc(**self._options.agc_yaml)
         else: ## default is AGC ON (with default parameters)
             self.set_agc(on=True)
+
         if self._options.compression is False:
             self._set_snd_comp(False)
+
         if self._options.nb is True:
             gate = self._options.nb_gate
             if gate < 100 or gate > 5000:
@@ -178,11 +181,15 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if nb_thresh < 0 or nb_thresh > 100:
                 nb_thresh = 50
             self.set_noise_blanker(gate, nb_thresh)
+
         self._output_sample_rate = self._sample_rate
+
         if self._squelch:
             self._squelch.set_sample_rate(self._sample_rate)
+
         if self._options.test_mode:
             self._set_stats()
+
         if self._options.resample > 0:
             if not HAS_RESAMPLER:
                 self._output_sample_rate = self._options.resample
@@ -352,8 +359,6 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._freq = freq
         self._start_ts = None
         self._start_time = None
-
-        self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
 
     def _setup_rx_params(self):
@@ -403,7 +408,6 @@ class KiwiExtensionRecorder(KiwiSDRStream):
         self._freq = None
         self._start_ts = None
         self._start_time = None
-        self._num_channels = 1
 
     def _setup_rx_params(self):
         logging.info("EXT setup_rx_params()")
@@ -593,7 +597,7 @@ def main():
     group.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
-                      help='Modulation; one of am, lsb, usb, cw, nbfm, iq (default passband if -L/-H not specified)')
+                      help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
     group.add_option('--ncomp', '--no_compression',
                       dest='compression',
                       default=True,

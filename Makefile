@@ -144,6 +144,13 @@ debug:
 	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
 #	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
 #	$(KREC) -s ai -p 8073 -f 10000 --user=wwv1 -m am --tlimit=60 --log-level=debug
+modes:
+	$(KREC) $(HP) -m iq  --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m sal --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m sas --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m qam --tlimit=4 --log_level debug
+info:
+	sox --info *.wav
 
 
 # S-meter
@@ -257,8 +264,9 @@ ale:
 
 # kiwiclientd
 kcd:
-#	$(PY) kiwiclientd.py $(HP) -f 8906 -m usb --snddev="Display Audio" --rigctl-port=6400
-	$(PY) kiwiclientd.py $(HP) -f 8906 -m usb --rigctl-port=6400 --log_level info --tlimit=5
+#	$(PY) kiwiclientd.py $(HP) -f 24000 -m usb --snddev="Display Audio" --rigctl-port=6400
+#	$(PY) kiwiclientd.py $(HP) -f 24000 -m usb --rigctl-port=6400 --log_level info --tlimit=5
+	$(PY) kiwiclientd.py $(HP) -f 24000 -m iq --rigctl-port=6400 --log_level info --tlimit=5 --if=200
 
 
 # time stations
