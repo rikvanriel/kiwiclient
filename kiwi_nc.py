@@ -100,6 +100,7 @@ class KiwiNetcat(KiwiSDRStream):
 
     def _setup_rx_params(self):
         self.set_name(self._options.user)
+
         if self._type == 'SND':
             mod    = self._options.modulation
             lp_cut = self._options.lp_cut
@@ -120,6 +121,10 @@ class KiwiNetcat(KiwiSDRStream):
 
             if self._options.compression is False:
                 self._set_snd_comp(False)
+
+            if self._options.de_emp is True:
+                self.set_de_emp(1)
+
         else:   # waterfall
             self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
             self._set_zoom_cf(0, 0)
@@ -262,10 +267,15 @@ def main():
     parser.add_option('-f', '--freq',
                       dest='frequency',
                       type='string', default=1000,
-                      help='Frequency to tune to, in kHz (can be a comma-separated list)',
+                      help='Frequency to tune to, in kHz (can be a comma-separated list). '
+                        'For sideband modes (lsb/lsn/usb/usn/cw/cwn) this is the carrier frequency. See --pbc option below.',
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    parser.add_option('--pbc', '--freq-pbc',
+                      dest='freq_pbc',
+                      action='store_true', default=False,
+                      help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
     parser.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
@@ -313,6 +323,10 @@ def main():
                       type='string',
                       default=None,
                       help='AGC options provided in a YAML-formatted file')
+    parser.add_option('--de-emp',
+                      dest='de_emp',
+                      action='store_true', default=False,
+                      help='Enable de-emphasis.')
     parser.add_option('--wf', '--waterfall',
                       dest='waterfall',
                       default=False,

@@ -251,6 +251,10 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             else:
                 raise KiwiUnknownModulation('"%s"' % mod)
 
+        if self._options.freq_pbc and mod in [ "lsb", "lsn", "usb", "usn", "cw", "cwn" ]:
+            pbc = (lc + (hc - lc)/2)/1000
+            logging.debug('set_mod: car_freq=%.2f pbc_offset=%.2f pbc_freq=%.2f' % (freq, pbc, freq - pbc))
+            freq = freq - pbc
         self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
         self._lowcut = lc
         self._highcut = hc
@@ -265,6 +269,9 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
     def set_noise_blanker(self, gate, thresh):
         self._send_message('SET nb=%d th=%d' % (gate, thresh))
+
+    def set_de_emp(self, de_emp):
+        self._send_message('SET de_emp=%d' % de_emp)
 
     def _set_ar_ok(self, ar_in, ar_out):
         self._send_message('SET AR OK in=%d out=%d' % (ar_in, ar_out))

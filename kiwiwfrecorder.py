@@ -200,6 +200,7 @@ def main():
     opt.raw = False
     opt.S_meter = -1
     opt.ADC_OV = None
+    opt.freq_pbc = None
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(opt.log_level.upper()), format=FORMAT)

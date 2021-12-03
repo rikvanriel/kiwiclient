@@ -182,6 +182,9 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 nb_thresh = 50
             self.set_noise_blanker(gate, nb_thresh)
 
+        if self._options.de_emp is True:
+            self.set_de_emp(1)
+
         self._output_sample_rate = self._sample_rate
 
         if self._squelch:
@@ -590,10 +593,15 @@ def main():
     group.add_option('-f', '--freq',
                       dest='frequency',
                       type='string', default=1000,
-                      help='Frequency to tune to, in kHz (can be a comma-separated list)',
+                      help='Frequency to tune to, in kHz (can be a comma-separated list). '
+                        'For sideband modes (lsb/lsn/usb/usn/cw/cwn) this is the carrier frequency. See --pbc option below.',
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    group.add_option('--pbc', '--freq-pbc',
+                      dest='freq_pbc',
+                      action='store_true', default=False,
+                      help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
     group.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
@@ -648,6 +656,10 @@ def main():
                       dest='nb_thresh',
                       type='int', default=50,
                       help='Noise blanker threshold in percent (0 to 100, default 50)')
+    group.add_option('--de-emp',
+                      dest='de_emp',
+                      action='store_true', default=False,
+                      help='Enable de-emphasis.')
     group.add_option('-w', '--kiwi-wav',
                       dest='is_kiwi_wav',
                       default=False,
