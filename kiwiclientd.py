@@ -308,7 +308,7 @@ def main():
                    " two KiwiSDR channels in USB to the virtual sound cards"
                    " kiwisdr0 & kiwisdr1, with the rigctl ports 6400 &"
                    " 6401 respectively, run the following:",
-                   "$ kiwiclientd.py -s kiwisdr.example.com -p 8073 -f 10000 -m usb --snddev kiwisnd0,kiwisnd1 --rigctl-port 6400,6401" ,""]
+                   "$ kiwiclientd.py -s kiwisdr.example.com -p 8073 -f 10000 -m usb --snddev kiwisnd0,kiwisnd1 --rigctl-port 6400,6401 --enable-rigctl" ,""]
     epilog = [] # text here would go after the options list
     parser = MyParser(usage=usage, description=description, epilog=epilog)
     parser.add_option('-s', '--server-host',
