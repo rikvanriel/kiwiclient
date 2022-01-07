@@ -430,7 +430,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                 self._meas_count += 1
                 self._tot_meas_count += 1
                 ts = time.strftime('%d-%b-%Y %H:%M:%S UTC ', time.gmtime()) if self._options.tstamp else ''
-                logging.debug("%sRSSI: %6.1f %d" % (ts, rssi, self._options.tstamp))
+                print("%sRSSI: %6.1f %d" % (ts, rssi, self._options.tstamp))
                 if not self._options.sound:
                     return
             else:

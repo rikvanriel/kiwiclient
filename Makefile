@@ -167,7 +167,9 @@ smt:
 
 s_meter_stream:
 sms:
-	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3
+#	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3 --stats --tstamp
+#	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3 --stats --tstamp --sdt-sec=1
 s_meter_stream_timed:
 smst:
 	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats
@@ -197,6 +199,14 @@ T_PARAMS = -q --log-level=info $(HP) -u test -f 28124.6 $M -L 1200 -H 1700 --tes
 
 slots1:
 	$(KREC) --station=1 $(T_PARAMS) &
+slots2:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+slots4:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
 slots6:
 	$(KREC) --station=1 $(T_PARAMS) &
 	$(KREC) --station=2 $(T_PARAMS) &
@@ -213,6 +223,19 @@ slots8:
 	$(KREC) --station=6 $(T_PARAMS) &
 	$(KREC) --station=7 $(T_PARAMS) &
 	$(KREC) --station=8 $(T_PARAMS) &
+slots12:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
+	$(KREC) --station=5 $(T_PARAMS) &
+	$(KREC) --station=6 $(T_PARAMS) &
+	$(KREC) --station=7 $(T_PARAMS) &
+	$(KREC) --station=8 $(T_PARAMS) &
+	$(KREC) --station=9 $(T_PARAMS) &
+	$(KREC) --station=10 $(T_PARAMS) &
+	$(KREC) --station=11 $(T_PARAMS) &
+	$(KREC) --station=12 $(T_PARAMS) &
 slots14:
 	$(KREC) --station=1 $(T_PARAMS) &
 	$(KREC) --station=2 $(T_PARAMS) &
@@ -228,9 +251,6 @@ slots14:
 	$(KREC) --station=12 $(T_PARAMS) &
 	$(KREC) --station=13 $(T_PARAMS) &
 	$(KREC) --station=14 $(T_PARAMS) &
-slots2:
-	$(KREC) --station=1 $(T_PARAMS) &
-	$(KREC) --station=2 $(T_PARAMS) &
 
 no_api:
 #	$(KREC) $(HP) --no-api
