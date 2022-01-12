@@ -110,6 +110,10 @@ class Squelch(object):
         self._squelch_on_seq = None
         self.set_sample_rate(12000.0) ## default setting
 
+    def set_threshold(self, threshold):
+        self._threshold = threshold
+        return self
+
     def set_sample_rate(self, fs):
         self._tail_delay  = round(self._squelch_tail*fs/512) ## seconds to number of buffers
 
@@ -149,9 +153,21 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._start_ts = None
         self._start_time = None
         self._squelch = Squelch(self._options) if options.sq_thresh is not None else None
+        if options.scan_yaml is not None:
+            self._squelch = [Squelch(options).set_threshold(options.scan_yaml['threshold']) for _ in range(len(options.scan_yaml['frequencies']))]
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
         self._gnss_performance = GNSSPerformance()
+
+    def set_freq(self, freq):
+        self._freq = freq
+        mod    = self._options.modulation
+        lp_cut = self._options.lp_cut
+        hp_cut = self._options.hp_cut
+        if mod == 'am' or mod == 'amn':
+            # For AM, ignore the low pass filter cutoff
+            lp_cut = -hp_cut if hp_cut is not None else hp_cut
+        self.set_mod(mod, lp_cut, hp_cut, self._freq)
 
     def _setup_rx_params(self):
         if self._options.no_api:
@@ -160,13 +176,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             return
         self.set_name(self._options.user)
 
-        mod    = self._options.modulation
-        lp_cut = self._options.lp_cut
-        hp_cut = self._options.hp_cut
-        if mod == 'am' or mod == 'amn':
-            # For AM, ignore the low pass filter cutoff
-            lp_cut = -hp_cut if hp_cut is not None else hp_cut
-        self.set_mod(mod, lp_cut, hp_cut, self._freq)
+        self.set_freq(self._freq)
 
         if self._options.agc_gain != None: ## fixed gain (no AGC)
             self.set_agc(on=False, gain=self._options.agc_gain)
@@ -193,7 +203,11 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._output_sample_rate = self._sample_rate
 
         if self._squelch:
-            self._squelch.set_sample_rate(self._sample_rate)
+            if type(self._squelch) == list: ## scan mode
+                for s in self._squelch:
+                    s.set_sample_rate(self._sample_rate)
+            else:
+                self._squelch.set_sample_rate(self._sample_rate)
 
         if self._options.test_mode:
             self._set_stats()
@@ -220,10 +234,33 @@ class KiwiSoundRecorder(KiwiSDRStream):
     def _process_audio_samples(self, seq, samples, rssi):
         if self._options.quiet is False:
             sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
+            if self._squelch and type(self._squelch) == list: ## scan mode
+                sys.stdout.write(" scan: [%s] freq = %g kHz      " % (self._options.scan_state, self._freq))
             sys.stdout.flush()
 
         if self._squelch:
-            is_open = self._squelch.process(seq, rssi)
+            if type(self._squelch) == list: ## scan mode
+                if self._options.scan_state == "WAIT":
+                    now = time.time()
+                    if now - self._options.scan_time > self._options.scan_yaml['wait']:
+                        self._options.scan_time = now
+                        self._options.scan_state = 'DWELL'
+                    return
+                if self._options.scan_state == 'DWELL':
+                    is_open = self._squelch[self._options.scan_index].process(seq, rssi)
+                    now = time.time()
+                    if not is_open and now - self._options.scan_time > self._options.scan_yaml['dwell']:
+                        self._options.scan_index = (self._options.scan_index + 1) % len(self._options.scan_yaml['frequencies'])
+                        self.set_freq(self._options.scan_yaml['frequencies'][self._options.scan_index])
+                        self._options.scan_time = now
+                        self._options.scan_state = 'WAIT'
+                        self._start_ts = None
+                        self._start_time = None
+                        return
+
+            else:
+                is_open = self._squelch.process(seq, rssi)
+
             if not is_open:
                 self._start_ts = None
                 self._start_time = None
@@ -649,6 +686,11 @@ def main():
                       type='string',
                       default=None,
                       help='AGC options provided in a YAML-formatted file')
+    group.add_option('--scan-yaml',
+                      dest='scan_yaml_file',
+                      type='string',
+                      default=None,
+                      help='Scan options provided in a YAML-formatted file')
     group.add_option('--nb',
                       dest='nb',
                       action='store_true', default=False,
@@ -776,6 +818,30 @@ def main():
             logging.fatal('The YAML file does not contain AGC options')
             return
         except Exception as e:
+            logging.fatal(e)
+            return
+
+    ### decode AGC YAML file options
+    options.scan_yaml = None
+    if options.scan_yaml_file:
+        try:
+            if not HAS_PyYAML:
+                raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            with open(options.scan_yaml_file) as yaml_file:
+                documents = yaml.full_load(yaml_file)
+                logging.debug('Scan file %s: %s' % (options.scan_yaml_file, documents))
+                logging.debug('Got Scan parameters from file %s: %s' % (options.scan_yaml_file, documents['Scan']))
+                options.scan_yaml = documents['Scan']
+                options.scan_state = 'WAIT'
+                options.scan_time = time.time()
+                options.scan_index = 0
+                options.frequency = options.scan_yaml['frequencies'][0]
+        except KeyError:
+            options.scan_yaml = None
+            logging.fatal('The YAML file does not contain Scan options')
+            return
+        except Exception as e:
+            options.scan_yaml = None
             logging.fatal(e)
             return
 
