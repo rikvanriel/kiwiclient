@@ -835,6 +835,7 @@ def main():
                 options.scan_state = 'WAIT'
                 options.scan_time = time.time()
                 options.scan_index = 0
+                options.scan_yaml['frequencies'] = [float(f) for f in options.scan_yaml['frequencies']]
                 options.frequency = options.scan_yaml['frequencies'][0]
         except KeyError:
             options.scan_yaml = None
