@@ -2,6 +2,10 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
+#PY = python
+#PY = python2
+PY = python3
+
 # set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
 ifeq ($(KIWI_HOST)x,x)
     HOST = kiwisdr.local
@@ -21,7 +25,7 @@ else
     FREQ = $(KIWI_FREQ)
 endif
 
-KREC = python kiwirecorder.py
+KREC = $(PY) kiwirecorder.py
 
 HP = -s $(HOST) -p $(PORT)
 H2 = -s $(HOST),$(HOST) -p $(PORT)
@@ -82,6 +86,19 @@ drm-1368:
 drm-621:
 	$(KREC) -s bengaluru.twrmon.net -p 8073 -f 621 $(DRM) --filename=Bengaluru.621.12k.iq
 
+#HP_DRM_BUG = -s www -p 8073
+HP_DRM_BUG = -s du6_pe1nsq.proxy.kiwisdr.com -p 8073
+#EXT = DRM
+EXT = SSTV
+
+drm-bug:
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=40 --test-mode --log_level=debug --snd --wf
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=4 --test-mode --log_level=debug
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --wf
+	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --snd --wf
+#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --nolocal
+
+
 # see if Dream works using a real-mode stream (it does)
 # requires a Kiwi in 3-channel mode (20.25 kHz) to accomodate a 10 kHz wide USB passband
 dream_real:
@@ -92,9 +109,9 @@ dream_real:
 # has both real and IQ mode decoding
 
 fax:
-	python kiwifax.py $(HP) -f $(FREQ) -F
+	$(PY) kiwifax.py $(HP) -f $(FREQ) -F
 faxiq:
-	python kiwifax.py $(HP) -f $(FREQ) -F --iq-stream
+	$(PY) kiwifax.py $(HP) -f $(FREQ) -F --iq-stream
 
 
 # Two separate IQ files recording in parallel
@@ -124,9 +141,16 @@ nb:
 2sec:
 	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 debug:
-#	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
-	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
+	$(KREC) $(HP) $(F_PB) --tlimit=10 --test-mode --log_level=debug
+#	$(KREC) -s ai,kiwi -p 8073,8074 --filename=wwv1,wwv2 -f 10000 --user=wwv1,wwv2 -m am --tlimit=60 --log-level=info
 #	$(KREC) -s ai -p 8073 -f 10000 --user=wwv1 -m am --tlimit=60 --log-level=debug
+modes:
+	$(KREC) $(HP) -m iq  --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m sal --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m sas --tlimit=4 --log_level debug
+	$(KREC) $(HP) -m qam --tlimit=4 --log_level debug
+info:
+	sox --info *.wav
 
 
 # S-meter
@@ -143,7 +167,9 @@ smt:
 
 s_meter_stream:
 sms:
-	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5
+	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3
+#	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3 --stats --tstamp
+#	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=3 --stats --tstamp --sdt-sec=1
 s_meter_stream_timed:
 smst:
 	$(KREC) $(HP) $(F_PB) --s-meter=0 --tlimit=5 --stats
@@ -162,7 +188,7 @@ smsi:
 # TDoA debugging
 
 tdoa:
-	python -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
+	$(PY) -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
 
 
 # test reported problem situations
@@ -173,6 +199,14 @@ T_PARAMS = -q --log-level=info $(HP) -u test -f 28124.6 $M -L 1200 -H 1700 --tes
 
 slots1:
 	$(KREC) --station=1 $(T_PARAMS) &
+slots2:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+slots4:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
 slots6:
 	$(KREC) --station=1 $(T_PARAMS) &
 	$(KREC) --station=2 $(T_PARAMS) &
@@ -189,6 +223,19 @@ slots8:
 	$(KREC) --station=6 $(T_PARAMS) &
 	$(KREC) --station=7 $(T_PARAMS) &
 	$(KREC) --station=8 $(T_PARAMS) &
+slots12:
+	$(KREC) --station=1 $(T_PARAMS) &
+	$(KREC) --station=2 $(T_PARAMS) &
+	$(KREC) --station=3 $(T_PARAMS) &
+	$(KREC) --station=4 $(T_PARAMS) &
+	$(KREC) --station=5 $(T_PARAMS) &
+	$(KREC) --station=6 $(T_PARAMS) &
+	$(KREC) --station=7 $(T_PARAMS) &
+	$(KREC) --station=8 $(T_PARAMS) &
+	$(KREC) --station=9 $(T_PARAMS) &
+	$(KREC) --station=10 $(T_PARAMS) &
+	$(KREC) --station=11 $(T_PARAMS) &
+	$(KREC) --station=12 $(T_PARAMS) &
 slots14:
 	$(KREC) --station=1 $(T_PARAMS) &
 	$(KREC) --station=2 $(T_PARAMS) &
@@ -204,9 +251,6 @@ slots14:
 	$(KREC) --station=12 $(T_PARAMS) &
 	$(KREC) --station=13 $(T_PARAMS) &
 	$(KREC) --station=14 $(T_PARAMS) &
-slots2:
-	$(KREC) --station=1 $(T_PARAMS) &
-	$(KREC) --station=2 $(T_PARAMS) &
 
 no_api:
 #	$(KREC) $(HP) --no-api
@@ -230,27 +274,93 @@ iq:
 	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level info
 
 
+# ALE 2G testing
+P_ALE = -f 2784 -m usb -L 300 -H 2700 --station=ALE --resample 8000 
+
+ale:
+	$(KREC) $(HP) $(P_ALE) --log_level debug --tlimit=5
+#	$(KREC) $(HP) $(P_ALE) --log_level=debug --tlimit=5 --test-mode --ext ale_2g --snd --wf
+
+
+# kiwiclientd
+kcd:
+#	$(PY) kiwiclientd.py --help
+#	$(PY) kiwiclientd.py $(HP) -f 24000 -m usb --snddev="Display Audio" --rigctl-port=6400
+#	$(PY) kiwiclientd.py $(HP) -f 24000 -m usb --rigctl-port=6400 --log_level info --tlimit=5
+#	$(PY) kiwiclientd.py $(HP) -f 24000 -m iq --rigctl-port=6400 --log_level info --tlimit=5 --if=200
+#	$(PY) kiwiclientd.py $(HP) -f 24001.16 -m cwn --rigctl-port=6400 --log_level debug --tlimit=5 
+	$(PY) kiwiclientd.py $(HP) -f 24001.66 --pbc -m cwn --enable-rigctl --rigctl-port=6400 --log_level debug --tlimit=5 
+#	$(PY) kiwiclientd.py $(HP) -f 24000.7 --pbc -m am -L -500 -H 500 --log_level debug --tlimit=5 
+#	$(PY) kiwiclientd.py $(HP) -f 24001.7 -m am -L -500 -H 500 --log_level debug --tlimit=5 
+
+
+# time stations
+
+BPC_HOST = -s railgun.proxy.kiwisdr.com -p 8073
+bpc:
+#	$(KREC) $(BPC_HOST) -f 68 -m iq -L 470 -H 530 --fn=BPC_cwn60_iq --tlimit=665 --log_level info
+	$(KREC) $(BPC_HOST) -f 68 -m iq -L 470 -H 530 --fn=BPC_cwn60_iq --tlimit=195 --log_level info
+
+#JJY_HOST = -s railgun.proxy.kiwisdr.com -p 8073
+JJY_HOST = -s 202.127.177.27 -p 8074
+jjy:
+	$(KREC) $(JJY_HOST) -f 39.5 -m iq -L 470 -H 530 --fn=JJY_cwn60_iq --tlimit=195 --log_level info
+
+RTZ_HOST = -s irk.proxy.kiwisdr.com -p 8073
+rtz:
+	$(KREC) $(RTZ_HOST) -f 49.6 -m iq -L 485 -H 515 --fn=RTZ_cwn30_iq --tlimit=195 --log_level info
+
+MSF_HOST = -s stucapon.plus.com -p 8073
+msf:
+	$(KREC) $(MSF_HOST) -f 59.5 -m iq -L 470 -H 530 --fn=MSF_cwn60_iq --tlimit=15 --log_level info
+
+WWVB_HOST = -s lounix.net -p 8073
+wwvb:
+	$(KREC) $(WWVB_HOST) -f 59.5 -m iq -L 497 -H 503 --fn=WWVB_cwn6_iq --tlimit=195 --log_level info
+
+
 # process waterfall data
 
 wf:
-	$(KREC) --wf $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF --tlimit=2
+#	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 --cal=-13
+
 wf2:
-	python kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
+	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
 
 micro:
-	python microkiwi_waterfall.py $(HP) -z 0 -o 0
+	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 0
 
 
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
-	python kiwi_nc.py $(HP) $(F_PB) -m am --progress
+#	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=3
+#	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
+	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
+
+# Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
+# since dumphfdl does its own filtering. However the Kiwi HFDL extension does have it so you
+# don't have to listen to noise and interference from the opposite sideband.
+HFDL_HOST = -s stucapon.plus.com -p 8073
+HFDL_FREQ = 5720
+
+dumphfdl:
+	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-decay 100 | \
+	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
+	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
+
+dumphfdl_agc_yaml:
+	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-yaml fast_agc.yaml | \
+	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
+	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
 
 tun:
 	mkfifo /tmp/si /tmp/so
 	nc -l localhost 1234 >/tmp/si </tmp/so &
 	ssh -f -4 -p 1234 -L 2345:localhost:8073 root@$(HOST) sleep 600 &
-	python kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
+	$(PY) kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
 
 
 help h:

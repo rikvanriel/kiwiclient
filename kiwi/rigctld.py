@@ -214,7 +214,7 @@ class Rigctld(object):
 
         # check for incoming traffic on existing connections
         read_list = self._clientsockets
-        readable, writable, errored = select.select(read_list, [], [], 0)
+        readable, writable, errored = select.select(read_list, [], [], 0) if len(read_list) > 0 else ([],[],[])
 
         for s in errored:
             s.close()

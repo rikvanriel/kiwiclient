@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 ## -*- python -*-
 
+##
+## FIXME: should support the usual suspects:
+##  IQ-swap, endian-reversal, resampling? (e.g. see kiwirecorder),
+##  option to include GPS data, ...
+##
+
 import array, logging, os, struct, sys, time, copy, threading, os
 import gc
 import numpy as np
@@ -9,6 +15,18 @@ from copy import copy
 from traceback import print_exc
 from kiwi import KiwiSDRStream, KiwiWorker
 from optparse import OptionParser
+from optparse import OptionGroup
+
+HAS_PyYAML = True
+try:
+    ## needed for the --agc-yaml option
+    import yaml
+    if yaml.__version__.split('.')[0] < '5':
+        print('wrong PyYAML version: %s < 5; PyYAML is only needed when using the --agc-yaml option' % yaml.__version__)
+        raise ImportError
+except ImportError:
+    ## (only) when needed an exception is raised, see below
+    HAS_PyYAML = False
 
 class RingBuffer(object):
     def __init__(self, len):
@@ -73,14 +91,16 @@ class KiwiNetcat(KiwiSDRStream):
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
         self._start_ts = None
-        self._start_time = None
+        #self._start_time = None
+        self._start_time = time.time()
+        self._options.stats = None
         self._squelch = Squelch(self._options) if options.thresh is not None else None
-        self._num_channels = 2 if options.modulation == 'iq' else 1
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._fp_stdout = os.fdopen(sys.stdout.fileno(), 'wb')
 
     def _setup_rx_params(self):
         self.set_name(self._options.user)
+
         if self._type == 'SND':
             mod    = self._options.modulation
             lp_cut = self._options.lp_cut
@@ -89,12 +109,22 @@ class KiwiNetcat(KiwiSDRStream):
                 # For AM, ignore the low pass filter cutoff
                 lp_cut = -hp_cut
             self.set_mod(mod, lp_cut, hp_cut, self._freq)
-            if self._options.agc_gain != None:
+
+            if self._options.agc_gain != None: ## fixed gain (no AGC)
                 self.set_agc(on=False, gain=self._options.agc_gain)
-            else:
+            if self._options.agc_decay != None: ## AGC on with specified decay
+                self.set_agc(on=True, decay=self._options.agc_decay)
+            elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
+                self.set_agc(**self._options.agc_yaml)
+            else: ## default is AGC ON (with default parameters)
                 self.set_agc(on=True)
+
             if self._options.compression is False:
                 self._set_snd_comp(False)
+
+            if self._options.de_emp is True:
+                self.set_de_emp(1)
+
         else:   # waterfall
             self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
             self._set_zoom_cf(0, 0)
@@ -114,17 +144,10 @@ class KiwiNetcat(KiwiSDRStream):
                     return
             self._write_samples(samples, {})
 
-    def _process_iq_samples_raw(self, seq, samples, rssi, gps):
-        if self._squelch:
-            is_open = self._squelch.process(seq, rssi)
-            if not is_open:
-                self._start_ts = None
-                self._start_time = None
-                return
-        s = array.array('h')
-        for x in [[y.real, y.imag] for y in samples]:
-            s.extend(map(int, x))
-        self._write_samples(s, gps)
+    def _process_iq_samples_raw(self, seq, data):
+        count = len(data) // 2
+        samples = np.ndarray(count, dtype='>h', buffer=data).astype(np.int16)
+        self._write_samples(samples, {})
 
     def _process_waterfall_samples_raw(self, samples, seq):
         if self._options.progress is True:
@@ -232,7 +255,7 @@ def main():
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-u', '--user',
-                      dest='user', type='string', default='kiwirecorder.py',
+                      dest='user', type='string', default='kiwi_nc.py',
                       help='Kiwi connection user name',
                       action='callback',
                       callback_args=(str,),
@@ -244,19 +267,24 @@ def main():
     parser.add_option('-f', '--freq',
                       dest='frequency',
                       type='string', default=1000,
-                      help='Frequency to tune to, in kHz (can be a comma-separated list)',
+                      help='Frequency to tune to, in kHz (can be a comma-separated list). '
+                        'For sideband modes (lsb/lsn/usb/usn/cw/cwn) this is the carrier frequency. See --pbc option below.',
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    parser.add_option('--pbc', '--freq-pbc',
+                      dest='freq_pbc',
+                      action='store_true', default=False,
+                      help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
     parser.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
-                      help='Modulation; one of am, lsb, usb, cw, nbfm, iq')
+                      help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
     parser.add_option('--ncomp', '--no_compression',
                       dest='compression',
                       default=True,
                       action='store_false',
-                      help='Don\'t use audio compression')
+                      help='Don\'t use audio compression (IQ mode never uses compression)')
     parser.add_option('-L', '--lp-cutoff',
                       dest='lp_cut',
                       type='float', default=100,
@@ -285,15 +313,37 @@ def main():
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
+    parser.add_option('--agc-decay',
+                      dest='agc_decay',
+                      type='int',
+                      default=1000,
+                      help='AGC decay (msec); if set, AGC is turned on')
+    parser.add_option('--agc-yaml',
+                      dest='agc_yaml_file',
+                      type='string',
+                      default=None,
+                      help='AGC options provided in a YAML-formatted file')
+    parser.add_option('--de-emp',
+                      dest='de_emp',
+                      action='store_true', default=False,
+                      help='Enable de-emphasis.')
     parser.add_option('--wf', '--waterfall',
                       dest='waterfall',
                       default=False,
                       action='store_true',
                       help='Process waterfall data instead of audio')
-    parser.add_option('--admin',
+
+    group = OptionGroup(parser, "KiwiSDR development options", "")
+    group.add_option('--gc-stats',
+                      dest='gc_stats',
+                      default=False,
+                      action='store_true',
+                      help='Print garbage collection stats')
+    group.add_option('--admin',
                       dest='admin',
                       default=False, action='store_true',
                       help='Kiwi connection: admin instead of default audio stream.')
+    parser.add_option_group(group)
 
     (options, unused_args) = parser.parse_args()
 
@@ -302,11 +352,29 @@ def main():
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(options.log_level.upper()), format=FORMAT)
-    if options.log_level.upper() == 'DEBUG':
+    if options.gc_stats:
         gc.set_debug(gc.DEBUG_SAVEALL | gc.DEBUG_LEAK | gc.DEBUG_UNCOLLECTABLE)
 
     run_event = threading.Event()
     run_event.set()
+
+    ### decode AGC YAML file options
+    options.agc_yaml = None
+    if options.agc_yaml_file:
+        try:
+            if not HAS_PyYAML:
+                raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            with open(options.agc_yaml_file) as yaml_file:
+                documents = yaml.full_load(yaml_file)
+                logging.debug('AGC file %s: %s' % (options.agc_yaml_file, documents))
+                logging.debug('Got AGC parameters from file %s: %s' % (options.agc_yaml_file, documents['AGC']))
+                options.agc_yaml = documents['AGC']
+        except KeyError:
+            logging.fatal('The YAML file does not contain AGC options')
+            return
+        except Exception as e:
+            logging.fatal(e)
+            return
 
     options.raw = True
     options.S_meter = -1
@@ -324,9 +392,10 @@ def main():
         opt.multiple_connections = multiple_connections
         opt.idx = 0
         nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, True),opt,run_event)))
-        opt.writer_init = False
-        opt.idx = 1
-        nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, False),opt,run_event)))
+        if gopt.admin:
+            opt.writer_init = False
+            opt.idx = 1
+            nc_inst.append(KiwiWorker(args=(KiwiNetcat(opt, False),opt,run_event)))
 
     try:
         for i,r in enumerate(nc_inst):
@@ -349,7 +418,8 @@ def main():
         join_threads(nc_inst)
         print("Exception: threads successfully closed")
 
-    logging.debug('gc %s' % gc.garbage)
+    if gopt.gc_stats:
+        logging.debug('gc %s' % gc.garbage)
 
 if __name__ == '__main__':
     #import faulthandler
