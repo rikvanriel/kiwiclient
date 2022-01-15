@@ -8,6 +8,7 @@ import numpy as np
 from copy import copy
 from traceback import print_exc
 from kiwi import KiwiSDRStream, KiwiWorker
+import optparse as optparse
 from optparse import OptionParser
 from optparse import OptionGroup
 
@@ -231,21 +232,24 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 self._output_sample_rate = self._ratio * self._sample_rate
                 logging.info('resampling from %g to %g Hz (ratio=%f)' % (self._sample_rate, self._output_sample_rate, self._ratio))
 
-    def _process_audio_samples(self, seq, samples, rssi):
-        if self._options.quiet is False:
+    def _squelch_status(self, seq, samples, rssi):
+        if not self._options.quiet:
             sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
-            if self._squelch and type(self._squelch) == list: ## scan mode
-                sys.stdout.write(" scan: [%s] freq = %g kHz      " % (self._options.scan_state, self._freq))
-            sys.stdout.flush()
+        if self._squelch and type(self._squelch) == list: ## scan mode
+            if self._options.quiet:
+                sys.stdout.write('\r')
+            sys.stdout.write(" scan: [%s] freq = %g kHz      " % (self._options.scan_state, self._freq))
+        sys.stdout.flush()
 
+        is_open = True
         if self._squelch:
             if type(self._squelch) == list: ## scan mode
                 if self._options.scan_state == "WAIT":
+                    is_open = False
                     now = time.time()
                     if now - self._options.scan_time > self._options.scan_yaml['wait']:
                         self._options.scan_time = now
                         self._options.scan_state = 'DWELL'
-                    return
                 if self._options.scan_state == 'DWELL':
                     is_open = self._squelch[self._options.scan_index].process(seq, rssi)
                     now = time.time()
@@ -256,15 +260,19 @@ class KiwiSoundRecorder(KiwiSDRStream):
                         self._options.scan_state = 'WAIT'
                         self._start_ts = None
                         self._start_time = None
-                        return
-
-            else:
+            else: ## single channel mode
                 is_open = self._squelch.process(seq, rssi)
+                if not is_open:
+                    self._start_ts = None
+                    self._start_time = None
+        return is_open
 
-            if not is_open:
-                self._start_ts = None
-                self._start_time = None
-                return
+
+    def _process_audio_samples(self, seq, samples, rssi):
+        is_open = self._squelch_status(seq, samples, rssi)
+        if not is_open:
+            return
+
 
         if self._options.resample > 0:
             if HAS_RESAMPLER:
@@ -282,12 +290,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._write_samples(samples, {})
 
     def _process_iq_samples(self, seq, samples, rssi, gps):
-        if self._squelch:
-            is_open = self._squelch.process(seq, rssi)
-            if not is_open:
-                self._start_ts = None
-                self._start_time = None
-                return
+        if not self._squelch_status(seq, samples, rssi):
+            return
 
         ##print gps['gpsnsec']-self._last_gps['gpsnsec']
         self._last_gps = gps
@@ -778,7 +782,10 @@ def main():
                       help='Make local network connections appear non-local')
     parser.add_option_group(group)
 
-    (options, unused_args) = parser.parse_args()
+    opts_no_defaults = optparse.Values()
+    __, args = parser.parse_args(values=opts_no_defaults)
+    options = optparse.Values(parser.get_default_values().__dict__)
+    options._update_careful(opts_no_defaults.__dict__)
 
     ## clean up OptionParser which has cyclic references
     parser.destroy()
@@ -827,6 +834,8 @@ def main():
         try:
             if not HAS_PyYAML:
                 raise Exception('PyYAML not installed: sudo apt install python-yaml / sudo apt install python3-yaml / pip install pyyaml / pip3 install pyyaml')
+            if hasattr(opts_no_defaults, 'frequency'):
+                raise Exception('cannot specify frequency (-f, --freq) together with scan YAML (--scan-yaml)')
             with open(options.scan_yaml_file) as yaml_file:
                 documents = yaml.full_load(yaml_file)
                 logging.debug('Scan file %s: %s' % (options.scan_yaml_file, documents))
