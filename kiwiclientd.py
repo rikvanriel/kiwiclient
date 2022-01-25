@@ -35,7 +35,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._options = options
         self._type = 'SND'
         freq = options.frequency
-        options.S_meter = False
+        options.S_meter = -1
         options.stats = False
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
