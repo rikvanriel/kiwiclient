@@ -624,11 +624,6 @@ def main():
                       default=False,
                       action='store_true',
                       help='Print additional statistics. Applies only to S-meter mode currently.')
-    parser.add_option('--no-api',
-                      dest='no_api',
-                      default=False,
-                      action='store_true',
-                      help='Simulate connection to Kiwi using improper/incomplete API')
     parser.add_option('-v', '-V', '--version',
                       dest='krec_version',
                       default=False,
@@ -780,6 +775,11 @@ def main():
                       default=False,
                       action='store_true',
                       help='Make local network connections appear non-local')
+    group.add_option('--no-api',
+                      dest='no_api',
+                      default=False,
+                      action='store_true',
+                      help='Simulate connection to Kiwi using improper/incomplete API')
     parser.add_option_group(group)
 
     opts_no_defaults = optparse.Values()

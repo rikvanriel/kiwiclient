@@ -537,9 +537,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def open(self):
         if self._type == 'SND' or self._type == 'W/F' or self._type == 'EXT':
             # "SET options=" must be sent before auth
-            if 'self._options.nolocal' in locals():
-                if self._options.nolocal:
-                    self._send_message('SET options=1')
+            if self._options.nolocal:
+                self._send_message('SET options=1')
             self._set_auth('kiwi', self._options.password, self._options.tlimit_password)
 
     def close(self):

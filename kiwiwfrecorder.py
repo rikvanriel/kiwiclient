@@ -197,6 +197,7 @@ def main():
     opt.socket_timeout = 10
     opt.tlimit = None
     opt.no_api = True
+    opt.nolocal = False
     opt.raw = False
     opt.S_meter = -1
     opt.ADC_OV = None

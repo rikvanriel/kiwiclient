@@ -319,6 +319,15 @@ wwvb:
 	$(KREC) $(WWVB_HOST) -f 59.5 -m iq -L 497 -H 503 --fn=WWVB_cwn6_iq --tlimit=195 --log_level info
 
 
+# simulate SuperSDR connection
+ss:
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd
+ssn:
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
+
+
 # process waterfall data
 
 wf:

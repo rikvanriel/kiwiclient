@@ -730,6 +730,7 @@ def main():
     (options, unused_args) = parser.parse_args()
     options.timestamp = int(time.time() + os.getpid()) & 0xffffffff
     options.raw = False
+    options.nolocal = False
     options.S_meter = -1
     options.rigctl_enabled = False
     options.freq_pbc = None

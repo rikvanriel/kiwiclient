@@ -511,6 +511,7 @@ def main():
     options.dir = None
     options.sound = True
     options.no_api = False
+    options.nolocal = False
     options.tstamp = False
     options.station = None
     options.filename = None
