@@ -172,8 +172,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _setup_rx_params(self):
         if self._options.no_api:
-            if self._options.user != 'kiwirecorder.py':
-                self.set_name(self._options.user)
+            self._setup_no_api()
             return
         self.set_name(self._options.user)
 
@@ -411,11 +410,16 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
 
     def _setup_rx_params(self):
+        if self._freq == 1000 and self._options.zoom == 0:
+            self._freq = 15000
         self._set_zoom_cf(self._options.zoom, self._freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
+        self._set_wf_speed(self._options.speed)
+        if self._options.no_api:
+            self._setup_no_api()
+            return
         #self._set_wf_comp(True)
         self._set_wf_comp(False)
-        self._set_wf_speed(self._options.speed)
         self._set_wf_interp(self._options.interp)
         self.set_name(self._options.user)
         self._start_time = time.time()

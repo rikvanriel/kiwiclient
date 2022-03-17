@@ -255,6 +255,10 @@ slots14:
 no_api:
 #	$(KREC) $(HP) --no-api
 	$(KREC) $(HP) --no-api $(F_PB) --test-mode
+no_api_snd:
+	$(KREC) $(HP) --snd --wf --no-api --test-mode --tlimit=10 --log_level debug
+no_api_wf:
+	$(KREC) $(HP) --wf --no-api --user=spaces --tlimit=10 --log_level debug
 no_api_user:
 	$(KREC) $(HP) --no-api --user=no_api_test
 
@@ -333,7 +337,7 @@ ssn:
 wf:
 #	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
 	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 
-	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 --cal=-13
+#	$(KREC) --wf $(HP) -f 9650 -z 4 --log_level debug -u krec-WF --tlimit=60 --cal=-13
 
 wf2:
 	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF

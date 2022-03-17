@@ -161,7 +161,7 @@ class KiwiSDRStreamBase(object):
 
     def _send_message(self, msg):
         if msg != 'SET keepalive':
-            logging.debug("send SET (%s) %s", self._stream_name, msg)
+            logging.debug("send SET (%s) \"%s\"", self._stream_name, msg)
         self._stream.send_message(msg)
 
     def _set_auth(self, client_type, password='', tlimit_password=''):
@@ -530,6 +530,21 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if self._type == 'SND':
             self._set_mod('am', 100, 2800, 4625.0)
             self._set_agc(True)
+
+    def _setup_no_api(self):
+        if self._options.user != 'none':
+            user = self._options.user
+            if user == 'blank':
+                user = ""
+            if user == 'spaces':
+                user = "   "
+            if user == 'spaces2':
+                user = "a b c"
+            if user == 'bad':
+                user = chr(1)
+            if user == 'bad2':
+                user = 'chr('+ chr(1) +'1)'
+            self.set_name(user)
 
     def _writer_message(self):
         pass
