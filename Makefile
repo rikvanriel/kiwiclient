@@ -259,6 +259,8 @@ no_api_snd:
 	$(KREC) $(HP) --snd --wf --no-api --test-mode --tlimit=10 --log_level debug
 no_api_wf:
 	$(KREC) $(HP) --wf --no-api --user=spaces --tlimit=10 --log_level debug
+no_api_wf_nl:
+	$(KREC) $(HP) --wf --no-api --user=spaces --tlimit=10 --log_level debug --nolocal
 no_api_user:
 	$(KREC) $(HP) --no-api --user=no_api_test
 
