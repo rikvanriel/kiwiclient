@@ -127,6 +127,8 @@ two:
 
 real:
 	$(KREC) $(HP) $(F_PB) --tlimit=10
+lsb:
+	$(KREC) $(HP) -f 7200 -m lsb --tlimit=10 --log-level=debug
 resample:
 	$(KREC) $(HP) $(F_PB) -r 6000 --tlimit=10
 resample_iq:
@@ -252,17 +254,14 @@ slots14:
 	$(KREC) --station=13 $(T_PARAMS) &
 	$(KREC) --station=14 $(T_PARAMS) &
 
-no_api:
-#	$(KREC) $(HP) --no-api
-	$(KREC) $(HP) --no-api $(F_PB) --test-mode
 no_api_snd:
-	$(KREC) $(HP) --snd --wf --no-api --test-mode --tlimit=10 --log_level debug
+	$(KREC) $(HP) --no-api $(F_PB) --test-mode --log_level debug --nolocal
+no_api_snd_wf:
+	$(KREC) $(HP) --snd --wf --no-api --test-mode --log_level debug --nolocal
 no_api_wf:
-	$(KREC) $(HP) --wf --no-api --user=spaces --tlimit=10 --log_level debug
-no_api_wf_nl:
-	$(KREC) $(HP) --wf --no-api --user=spaces --tlimit=10 --log_level debug --nolocal
+	$(KREC) $(HP) --wf --no-api --user=spaces --log_level debug --nolocal
 no_api_user:
-	$(KREC) $(HP) --no-api --user=no_api_test
+	$(KREC) $(HP) --no-api --user=no_api_test --log_level debug --nolocal
 
 
 # IQ file with GPS timestamps
