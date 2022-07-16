@@ -344,6 +344,7 @@ wf2:
 	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
 
 micro:
+#	$(PY) microkiwi_waterfall.py --help
 	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 0
 
 

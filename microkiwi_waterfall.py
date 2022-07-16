@@ -14,6 +14,15 @@ import mod_pywebsocket.common
 from mod_pywebsocket.stream import Stream
 from mod_pywebsocket.stream import StreamOptions
 
+import sys
+if sys.version_info > (3,):
+    buffer = memoryview
+    def bytearray2str(b):
+        return b.decode('ascii')
+else:
+    def bytearray2str(b):
+        return str(b)
+
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -42,13 +51,13 @@ else:
 
 host = options['server']
 port = options['port']
-print "KiwiSDR Server: %s:%d" % (host,port)
+print ("KiwiSDR Server: %s:%d" % (host,port))
 # the default number of bins is 1024
 bins = 1024
-print "Number of waterfall bins: %d" % bins
+print ("Number of waterfall bins: %d" % bins)
 
 zoom = options['zoom']
-print "Zoom factor:", zoom
+print ("Zoom factor:", zoom)
 
 offset_khz = options['start'] # this is offset in kHz
 
@@ -66,23 +75,22 @@ if offset_khz>0:
 else:
 	offset = 0
 
-print span, offset
+print (span, offset)
 
 center_freq = span/2+offset_khz
-print "Center frequency: %.3f MHz" % (center_freq/1000)
+print ("Center frequency: %.3f MHz" % (center_freq/1000))
 
 now = str(datetime.now())
-header = [center_freq, span, now]
-header_bin = struct.pack("II26s", *header)
+header_bin = struct.pack("II26s", int(center_freq), int(span), bytes(now, 'utf-8'))
 
-print "Trying to contact server..."
+print ("Trying to contact server...")
 try:
     mysocket = socket.socket()
     mysocket.connect((host, port))
 except:
-    print "Failed to connect"
+    print ("Failed to connect")
     exit()   
-print "Socket open..."
+print ("Socket open...")
 
 uri = '/%d/%s' % (int(time.time()), 'W/F')
 handshake = wsclient.ClientHandshakeProcessor(mysocket, host, port)
@@ -96,7 +104,7 @@ stream_option.mask_send = True
 stream_option.unmask_receive = False
 
 mystream = Stream(request, stream_option)
-print "Data stream active..."
+print ("Data stream active...")
 
 
 # send a sequence of messages to the server, hardcoded for now
@@ -105,7 +113,7 @@ msg_list = ['SET auth t=kiwi p=', 'SET zoom=%d start=%d'%(zoom,offset),\
 'SET maxdb=0 mindb=-100', 'SET wf_speed=4', 'SET wf_comp=0']
 for msg in msg_list:
     mystream.send_message(msg)
-print "Starting to retrieve waterfall data..."
+print ("Starting to retrieve waterfall data...")
 # number of samples to draw from server
 length = options['length']
 # create a numpy array to contain the waterfall data
@@ -115,10 +123,10 @@ time = 0
 while time<length:
     # receive one msg from server
     tmp = mystream.receive_message()
-    if "W/F" in tmp: # this is one waterfall line
+    if bytearray2str(tmp[0:3]) == "W/F": # this is one waterfall line
         tmp = tmp[16:] # remove some header from each msg
         if options['verbosity']:
-            print time,
+            print (time)
         #spectrum = np.array(struct.unpack('%dB'%len(tmp), tmp) ) # convert from binary data to uint8
         spectrum = np.ndarray(len(tmp), dtype='B', buffer=tmp) # convert from binary data to uint8
         if filename:
@@ -129,14 +137,14 @@ while time<length:
         wf_data[time, :] = wf_data[time, :] - 13  # typical Kiwi wf cal
         time += 1
     else: # this is chatter between client and server
-        #print tmp
+        #print (tmp)
         pass
 
 try:
     mystream.close_connection(mod_pywebsocket.common.STATUS_GOING_AWAY)
     mysocket.close()
 except Exception as e:
-    print "exception: %s" % e
+    print ("exception: %s" % e)
 
 
 avg_wf = np.mean(wf_data, axis=0) # average over time
@@ -144,14 +152,14 @@ avg_wf = np.mean(wf_data, axis=0) # average over time
 p95 = np.percentile(avg_wf, 95)
 median = np.percentile(avg_wf, 50)
 
-print "Average SNR computation..."
-print "Waterfall with %d bins: median= %f dB, p95= %f dB - SNR= %f rbw= %f kHz" % (bins, median, p95,p95-median, rbw)
+print ("Average SNR computation...")
+print ("Waterfall with %d bins: median= %f dB, p95= %f dB - SNR= %f rbw= %f kHz" % (bins, median, p95,p95-median, rbw))
 
 
 if filename:
-    print "Saving binary data to file..."
+    print ("Saving binary data to file...")
     with open(filename, "wb") as fd:
-    	fd.write(header_bin) # write the header info at the top
+        fd.write(header_bin) # write the header info at the top
         for line in binary_wf_list:
             fd.write(line)
-print "All done!"
+print ("All done!")
