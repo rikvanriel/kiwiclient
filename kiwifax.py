@@ -728,7 +728,7 @@ def main():
                       help='Print "ADC OV" message when Kiwi ADC is overloaded')
 
     (options, unused_args) = parser.parse_args()
-    options.timestamp = int(time.time() + os.getpid()) & 0xffffffff
+    options.ws_timestamp = int(time.time() + os.getpid()) & 0xffffffff
     options.raw = False
     options.nolocal = False
     options.S_meter = -1
