@@ -7,14 +7,16 @@ This is a Python client for KiwiSDR. It allows you to:
 
 ## Dependencies
 
+Although the code has some backward compatibility with Python2 it is recommended you use Python3.
+
 Make sure the Python package `'numpy'` is installed.
-On many Linux distributions the command would be similar to `'apt install python-numpy'`
+On many Linux distributions the command would be similar to `'apt install python3-numpy'`
 
 ## Demo code
 
 The following demo programs are provided. Use the `--help` argument to see all program options.
 
-* `kiwirecorder`: Record audio to WAV files, with squelch. Option `--wf` prints various waterfall statistics.
+* `kiwirecorder`: Record audio to WAV files, with squelch. Option `--wf` prints various waterfall statistics. <br> Adding option `--wf-png` records the waterfall as a PNG file. `--help` for more info.
 * `kiwiwfrecorder`: Specialty program. Saves waterfall data and GPS timestamps to .npy format file.
 * `kiwifax`: Decode radiofax and save as PNGs, with auto start, stop, and phasing.
 * `kiwiclientd`: Plays Kiwi audio on sound cards (real & virtual) for use by programs like fldigi and wsjtx.
@@ -27,7 +29,7 @@ The `Makefile` contains numerous examples of how to use these programs.
 
 Two utilities have been added to simplify the waterfall data acquisition/storage and data analysis.
 The SNR ratio (a la Pierre Ynard) is computed each time.
-There is now the possibility to change zoom level and offset frequency (this is still approximate! waiting for jks help ;) )
+There is now the possibility to change zoom level and offset frequency.
 
 * `microkiwi_waterfall.py`: launch this program with no filename and just the SNR will be computed, with a filename, the raw waterfall data is saved. Launch with `--help` to list all options.
 * `waterfall_data_analysis.ipynb`: this is a demo jupyther notebook to interactively analyze waterfall data. Easily transformable into a standalone python program.

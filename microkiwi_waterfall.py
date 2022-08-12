@@ -37,7 +37,7 @@ parser.add_option("-l", "--length", type=int,
 parser.add_option("-z", "--zoom", type=int,
                   help="zoom factor", dest="zoom", default=0)
 parser.add_option("-o", "--offset", type=int,
-                  help="start frequency in kHz", dest="start", default=0)
+                  help="start frequency in kHz", dest="offset_khz", default=0)
 parser.add_option("-v", "--verbose", type=int,
                   help="whether to print progress and debug info", dest="verbosity", default=0)
                   
@@ -59,26 +59,21 @@ print ("Number of waterfall bins: %d" % bins)
 zoom = options['zoom']
 print ("Zoom factor:", zoom)
 
-offset_khz = options['start'] # this is offset in kHz
-
 full_span = 30000.0 # for a 30MHz kiwiSDR
 if zoom>0:
     span = full_span / 2.**zoom
 else:
 	span = full_span
 
+start = options['offset_khz']
+stop = start + span
 rbw = span/bins
-if offset_khz>0:
-#	offset = (offset_khz-span/2)/(full_span/bins)*2**(zoom)*1000.
-	offset = (offset_khz+100)/(full_span/bins)*2**(4)*1000.
-	offset = max(0, offset)
-else:
-	offset = 0
+center_freq = span/2+start
+print ("Start %.3f, Stop %.3f, Center %.3f, Span %.3f (MHz)" % (start/1000, stop/1000, center_freq/1000, span/1000))
 
-print (span, offset)
-
-center_freq = span/2+offset_khz
-print ("Center frequency: %.3f MHz" % (center_freq/1000))
+if start < 0 or stop > full_span:
+    s = "Frequency and zoom values result in span outside 0 - %d kHz range" % full_span
+    raise Exception(s)
 
 now = str(datetime.now())
 header_bin = struct.pack("II26s", int(center_freq), int(span), bytes(now, 'utf-8'))
@@ -109,7 +104,7 @@ print ("Data stream active...")
 
 # send a sequence of messages to the server, hardcoded for now
 # max wf speed, no compression
-msg_list = ['SET auth t=kiwi p=', 'SET zoom=%d start=%d'%(zoom,offset),\
+msg_list = ['SET auth t=kiwi p=', 'SET zoom=%d cf=%d'%(zoom,center_freq),\
 'SET maxdb=0 mindb=-100', 'SET wf_speed=4', 'SET wf_comp=0']
 for msg in msg_list:
     mystream.send_message(msg)

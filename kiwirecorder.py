@@ -7,6 +7,7 @@ import math
 import numpy as np
 from copy import copy
 from traceback import print_exc
+import png
 from kiwi import KiwiSDRStream, KiwiWorker
 import optparse as optparse
 from optparse import OptionParser
@@ -36,6 +37,16 @@ try:
         HAS_RESAMPLER = False
 except KeyError:
     pass
+
+def clamp(x, xmin, xmax):
+    if x < xmin:
+        x = xmin
+    if x > xmax:
+        x = xmax
+    return x
+
+def by_dBm(e):
+    return e['dBm']
 
 def _write_wav_header(fp, filesize, samplerate, num_channels, is_kiwi_wav):
     fp.write(struct.pack('<4sI4s', b'RIFF', filesize - 8, b'WAVE'))
@@ -133,8 +144,9 @@ class Squelch(object):
             self._squelch_on_seq = seq
             is_open = True
         if self._status_msg:
-            sys.stdout.write('\r Median: %6.1f Thr: %6.1f %s' % (median_nf, rssi_thresh, ("s", "S")[is_open]))
+            sys.stdout.write('\r Median: %6.1f Thr: %6.1f %s ' % (median_nf, rssi_thresh, ("s", "S")[is_open]))
             sys.stdout.flush()
+            self._need_nl = True
         if not is_open:
             return False
         if seq > self._squelch_on_seq + self._tail_delay:
@@ -233,11 +245,13 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
     def _squelch_status(self, seq, samples, rssi):
         if not self._options.quiet:
-            sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
+            sys.stdout.write('\rBlock: %08x, RSSI: %6.1f ' % (seq, rssi))
+            self._need_nl = True
         if self._squelch and type(self._squelch) == list: ## scan mode
             if self._options.quiet:
                 sys.stdout.write('\r')
             sys.stdout.write(" scan: [%s] freq = %g kHz      " % (self._options.scan_state, self._freq))
+            self._need_nl = True
         sys.stdout.flush()
 
         is_open = True
@@ -323,23 +337,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
         if last == 255 or last == 254:
             self._options.status = 3
 
-    def _get_output_filename(self):
-        if self._options.test_mode:
-            return os.devnull
-        station = '' if self._options.station is None else '_'+ self._options.station
-
-        # if multiple connections specified but not distinguished via --station then use index
-        if self._options.multiple_connections and self._options.station is None:
-            station = '_%d' % self._options.idx
-        if self._options.filename != '':
-            filename = '%s%s.wav' % (self._options.filename, station)
-        else:
-            ts  = time.strftime('%Y%m%dT%H%M%SZ', self._start_ts)
-            filename = '%s_%d%s_%s.wav' % (ts, int(self._freq * 1000), station, self._options.modulation)
-        if self._options.dir is not None:
-            filename = '%s/%s' % (self._options.dir, filename)
-        return filename
-
     def _update_wav_header(self):
         with open(self._get_output_filename(), 'r+b') as fp:
             fp.seek(0, os.SEEK_END)
@@ -405,13 +402,47 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         freq = options.frequency
         #logging.info "%s:%s freq=%d" % (options.server_host, options.server_port, freq)
         self._freq = freq
-        self._start_ts = None
+        self._start_ts = time.gmtime()
         self._start_time = None
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
+        self.wf_pass = 0
+        self._rows = []
+        self._cmap_r = array.array('B')
+        self._cmap_g = array.array('B')
+        self._cmap_b = array.array('B')
+
+        # Kiwi color map
+        for i in range(256):
+            if i < 32:
+                r = 0
+                g = 0
+                b = i*255/31
+            elif i < 72:
+                r = 0
+                g = (i-32)*255/39
+                b = 255
+            elif i < 96:
+                r = 0
+                g = 255
+                b = 255-(i-72)*255/23
+            elif i < 116:
+                r = (i-96)*255/19
+                g = 255
+                b = 0
+            elif i < 184:
+                r = 255
+                g = 255-(i-116)*255/67
+                b = 0
+            else:
+                r = 255
+                g = 0
+                b = (i-184)*128/70
+
+            self._cmap_r.append(clamp(round(r), 0, 255))
+            self._cmap_g.append(clamp(round(g), 0, 255))
+            self._cmap_b.append(clamp(round(b), 0, 255))
 
     def _setup_rx_params(self):
-        if self._freq == 1000 and self._options.zoom == 0:
-            self._freq = 15000
         self._set_zoom_cf(self._options.zoom, self._freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         self._set_wf_speed(self._options.speed)
@@ -429,47 +460,132 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         if start < 0 or stop > self.MAX_FREQ:
             s = "Frequency and zoom values result in span outside 0 - %d kHz range" % (self.MAX_FREQ)
             raise Exception(s)
-        logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
-              % (start, self._freq, stop, span, span/self.WF_BINS, self._options.cal))
+        if self._options.wf_cal is None:
+            self._options.wf_cal = -13      # pre v1.550 compatibility
+        if not self._options.quiet:
+            logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
+                  % (start, self._freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
+        if self._options.wf_png is True:
+            logging.info("--wf_png: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
 
+    def _waterfall_color_index_max_min(self, value):
+        db_value = -(255 - value)       # 55..255 => -200..0 dBm
+        db_value = clamp(db_value + self._options.wf_cal, self._options.mindb, self._options.maxdb)
+        relative_value = db_value - self._options.mindb
+        fullscale = self._options.maxdb - self._options.mindb
+        fullscale = fullscale if fullscale != 0 else 1      # can't be zero
+        value_percent = relative_value / fullscale
+        return clamp(round(value_percent * 255), 0, 255)
+    
     def _process_waterfall_samples(self, seq, samples):
         nbins = len(samples)
         bins = nbins-1
-        max = -1
-        min = 256
-        bmax = bmin = 0
         i = 0
+        pwr = []
+        pixels = array.array('B')
+        wf_ok = self._options.wf_png and (not self._options.wf_auto or (self._options.wf_auto and self.wf_pass != 0))
+
         for s in samples:
-            if s > max:
-                max = s
-                bmax = i
-            if s < min and i > 2:   # skip DC offset notch in first two bins
-                min = s
-                bmin = i
-            i += 1
-        span = self.zoom_to_span(self._options.zoom)
-        start = self._freq - span/2
-        logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
-              % (nbins, min-255 + self._options.cal, start + span*bmin/bins, max-255 + self._options.cal, start + span*bmax/bins))
+            dBm = s - 255
+            if i > 2 and dBm > -190:    # skip DC offset notch in first two bins and also masked areas
+                pwr.append({ 'dBm':dBm, 'i':i })
+            i = i+1
+            
+            if wf_ok:
+                ci = self._waterfall_color_index_max_min(s)
+                pixels.append(self._cmap_r[ci])
+                pixels.append(self._cmap_g[ci])
+                pixels.append(self._cmap_b[ci])
+        
+        pwr.sort(key = by_dBm)
+        length = len(pwr)
+        pmin = pwr[0]['dBm'] + self._options.wf_cal
+        bmin = pwr[0]['i']
+        pmax = pwr[length-1]['dBm'] + self._options.wf_cal
+        bmax = pwr[length-1]['i']
+        
+        if not self._options.quiet:
+            span = self.zoom_to_span(self._options.zoom)
+            start = self._freq - span/2
+            logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
+                  % (nbins, pmin, start + span*bmin/bins, pmax, start + span*bmax/bins))
+
+        if self._options.wf_png and self._options.wf_auto and self.wf_pass == 0:
+            noise = pwr[int(0.50 * length)]['dBm']
+            signal = pwr[int(0.95 * length)]['dBm']
+            # empirical adjustments
+            signal = signal + 30
+            if signal < -80:
+                 signal = -80
+            noise -= 10
+            self._options.mindb = noise
+            self._options.maxdb = signal
+            logging.info("--wf_auto: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
+        self.wf_pass = self.wf_pass+1
+        if wf_ok is True:
+            self._rows.append(pixels)
+
+    def _close_func(self):
+        if self._options.wf_png is True:
+            self._flush_rows()
+
+    def _flush_rows(self):
+        if not self._rows:
+            return
+        filename = self._get_output_filename(".png")
+        logging.info("--wf_png: writing file %s" % filename)
+        while True:
+            with open(filename, 'wb') as fp:
+                try:
+                    png.Writer(len(self._rows[0]) // 3, len(self._rows)).write(fp, self._rows)
+                    break
+                except KeyboardInterrupt:
+                    pass
 
 class KiwiExtensionRecorder(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiExtensionRecorder, self).__init__()
         self._options = options
         self._type = 'EXT'
-        logging.info("%s:%s EXT init" % (options.server_host, options.server_port))
         self._freq = None
         self._start_ts = None
-        self._start_time = None
+        self._start_time = time.time()
 
     def _setup_rx_params(self):
-        logging.info("EXT setup_rx_params()")
         self.set_name(self._options.user)
-        logging.info("CAUTION: rx_chan=0 assumed!")
-        self._send_message('SET ext_switch_to_client=%s first_time=1 rx_chan=0' % (self._options.extension))
+        # rx_chan deprecated, sent for backward compatibility only
+        self._send_message('SET ext_switch_to_client=%s first_time=1 rx_chan=0' % self._options.extension)
+
         if (self._options.extension == 'DRM'):
-            self._send_message('SET lock_set')
-        self._start_time = time.time()
+            if self._kiwi_version is not None and self._kiwi_version >= 1.550:
+                self._send_message('SET lock_set')
+                self._send_message('SET monitor=0')
+                self._send_message('SET send_iq=0')
+                self._send_message('SET run=1')
+            else:
+                raise Exception("KiwiSDR server v1.550 or later required for DRM")
+
+        if self._options.ext_test:
+            self._send_message('SET test=1')
+
+    def _process_ext_msg(self, log, name, value):
+        prefix = "EXT %s = " % name if name != None else ""
+        if log is True:
+            logging.info("recv %s%s" % (prefix, value))
+        else:
+            sys.stdout.write("%s%s%s\n" % ("\n" if self._need_nl else "", prefix, value))
+            self._need_nl = False if self._need_nl is True else False
+
+    def _process_ext(self, name, value):
+        if self._options.extension == 'DRM':
+            if self._options.stats and name == "drm_status_cb":
+                self._process_ext_msg(False, None, value);
+            elif name != "drm_status_cb" and name != "drm_bar_pct" and name != "annotate":
+                self._process_ext_msg(True, name, value);
+            if name == "locked" and value != "1":
+                raise Exception("No DRM when Kiwi running other extensions or too many connections active")
+        else:
+            self._process_ext_msg(True, name, value);
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
@@ -485,7 +601,7 @@ def options_cross_product(options):
         opt_single.status = 0
 
         # time() returns seconds, so add pid and host index to make timestamp unique per connection
-        opt_single.timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
+        opt_single.ws_timestamp = int(time.time() + os.getpid() + i) & 0xffffffff
         for x in ['server_port', 'password', 'tlimit_password', 'frequency', 'agc_gain', 'filename', 'station', 'user']:
             opt_single.__dict__[x] = _sel_entry(i, opt_single.__dict__[x])
         l.append(opt_single)
@@ -536,31 +652,36 @@ def main():
     epilog = [] # text here would go after the options list
     parser = MyParser(usage=usage, description=description, epilog=epilog)
     parser.add_option('-s', '--server-host',
-                      dest='server_host', type='string',
-                      default='localhost', help='Server host (can be a comma-separated list)',
+                      dest='server_host',
+                      type='string', default='localhost',
+                      help='Server host (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-p', '--server-port',
-                      dest='server_port', type='string',
-                      default=8073, help='Server port, default 8073 (can be a comma-separated list)',
+                      dest='server_port',
+                      type='string', default=8073,
+                      help='Server port, default 8073 (can be a comma-separated list)',
                       action='callback',
                       callback_args=(int,),
                       callback=get_comma_separated_args)
     parser.add_option('--pw', '--password',
-                      dest='password', type='string', default='',
+                      dest='password',
+                      type='string', default='',
                       help='Kiwi login password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('--tlimit-pw', '--tlimit-password',
-                      dest='tlimit_password', type='string', default='',
+                      dest='tlimit_password',
+                      type='string', default='',
                       help='Connect time limit exemption password (if required, can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
     parser.add_option('-u', '--user',
-                      dest='user', type='string', default='kiwirecorder.py',
+                      dest='user',
+                      type='string', default='kiwirecorder.py',
                       help='Kiwi connection user name (can be a comma-separated list)',
                       action='callback',
                       callback_args=(str,),
@@ -572,14 +693,14 @@ def main():
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
-    parser.add_option('--log', '--log-level', '--log_level', type='choice',
-                      dest='log_level', default='warn',
+    parser.add_option('--log', '--log-level', '--log_level',
+                      dest='log_level',
+                      type='choice', default='warn',
                       choices=['debug', 'info', 'warn', 'error', 'critical'],
                       help='Log level: debug|info|warn(default)|error|critical')
     parser.add_option('-q', '--quiet',
                       dest='quiet',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Don\'t print progress messages')
     parser.add_option('-d', '--dir',
                       dest='dir',
@@ -605,41 +726,41 @@ def main():
                       type='int', default=0,
                       help='Delay (secs) in launching multiple connections')
     parser.add_option('--connect-retries', '--connect_retries',
-                      dest='connect_retries', type='int', default=0,
+                      dest='connect_retries',
+                      type='int', default=0,
                       help='Number of retries when connecting to host (retries forever by default)')
     parser.add_option('--connect-timeout', '--connect_timeout',
-                      dest='connect_timeout', type='int', default=15,
+                      dest='connect_timeout',
+                      type='int', default=15,
                       help='Retry timeout(sec) connecting to host')
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
-                      dest='socket_timeout', type='int', default=10,
+                      dest='socket_timeout',
+                      type='int', default=10,
                       help='Socket timeout(sec) during data transfers')
     parser.add_option('--OV',
                       dest='ADC_OV',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Print "ADC OV" message when Kiwi ADC is overloaded')
     parser.add_option('--ts', '--tstamp', '--timestamp',
                       dest='tstamp',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Add timestamps to output. Applies only to S-meter mode currently.')
     parser.add_option('--stats',
                       dest='stats',
-                      default=False,
-                      action='store_true',
-                      help='Print additional statistics. Applies only to S-meter mode currently.')
+                      action='store_true', default=False,
+                      help='Print additional statistics. Applies to e.g. S-meter and extension modes.')
     parser.add_option('-v', '-V', '--version',
                       dest='krec_version',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Print version number and exit')
 
     group = OptionGroup(parser, "Audio connection options", "")
     group.add_option('-f', '--freq',
                       dest='frequency',
-                      type='string', default=1000,
+                      type='string', default=15000,     # 15000 prevents --wf mode span error for zoom=0
                       help='Frequency to tune to, in kHz (can be a comma-separated list). '
-                        'For sideband modes (lsb/lsn/usb/usn/cw/cwn) this is the carrier frequency. See --pbc option below.',
+                        'For sideband modes (lsb/lsn/usb/usn/cw/cwn) this is the carrier frequency. '
+                        'See --pbc option below. Also sets waterfall mode center frequency.',
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
@@ -647,14 +768,13 @@ def main():
                       dest='freq_pbc',
                       action='store_true', default=False,
                       help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
-    group.add_option('-m', '--modulation',
+    group.add_option('-m', '--mode', '--modulation',
                       dest='modulation',
                       type='string', default='am',
                       help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
-    group.add_option('--ncomp', '--no_compression',
+    group.add_option('--ncomp', '--no_compression', '--no_compression',
                       dest='compression',
-                      default=True,
-                      action='store_false',
+                      action='store_false', default=True,
                       help='Don\'t use audio compression')
     group.add_option('-L', '--lp-cutoff',
                       dest='lp_cut',
@@ -678,21 +798,18 @@ def main():
                       help='Time for which the squelch remains open after the signal is below threshold.')
     group.add_option('-g', '--agc-gain',
                       dest='agc_gain',
-                      type='string',
-                      default=None,
+                      type='string', default=None,
                       help='AGC gain; if set, AGC is turned off (can be a comma-separated list)',
                       action='callback',
                       callback_args=(float,),
                       callback=get_comma_separated_args)
     group.add_option('--agc-yaml',
                       dest='agc_yaml_file',
-                      type='string',
-                      default=None,
+                      type='string', default=None,
                       help='AGC options provided in a YAML-formatted file')
     group.add_option('--scan-yaml',
                       dest='scan_yaml_file',
-                      type='string',
-                      default=None,
+                      type='string', default=None,
                       help='Scan options provided in a YAML-formatted file')
     group.add_option('--nb',
                       dest='nb',
@@ -712,23 +829,19 @@ def main():
                       help='Enable de-emphasis.')
     group.add_option('-w', '--kiwi-wav',
                       dest='is_kiwi_wav',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='In the wav file include KIWI header containing GPS time-stamps (only for IQ mode)')
     group.add_option('--kiwi-tdoa',
                       dest='is_kiwi_tdoa',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Used when called by Kiwi TDoA extension')
     group.add_option('--test-mode',
                       dest='test_mode',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Write wav data to /dev/null (Linux) or NUL (Windows)')
     group.add_option('--snd', '--sound',
                       dest='sound',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Also process sound data when in waterfall or S-meter mode (sound connection options above apply)')
     parser.add_option_group(group)
 
@@ -746,43 +859,65 @@ def main():
     group = OptionGroup(parser, "Waterfall connection options", "")
     group.add_option('--wf',
                       dest='waterfall',
-                      default=False,
-                      action='store_true',
-                      help='Process waterfall data instead of audio')
+                      action='store_true', default=False,
+                      help='Process waterfall data instead of audio. Center frequency set by audio option --f/--freq')
     group.add_option('-z', '--zoom',
-                      dest='zoom', type='int', default=0,
+                      dest='zoom',
+                      type='int', default=0,
                       help='Zoom level 0-14')
     group.add_option('--speed',
-                      dest='speed', type='int', default=1,
+                      dest='speed',
+                      type='int', default=1,
                       help='Waterfall update speed: 1=1Hz, 2=slow, 3=med, 4=fast')
-    group.add_option('--cal',
-                      dest='cal', type='int', default=0,
-                      help='Waterfall calibration correction value.')
     group.add_option('--interp',
-                      dest='interp', type='int', default=13,
+                      dest='interp',
+                      type='int', default=13,
                       help='Waterfall display interpolation 0-13')
+    group.add_option('--wf-png',
+                      dest='wf_png',
+                      action='store_true', default=False,
+                      help='Create waterfall .png file. --station and --filename options apply')
+    group.add_option('--maxdb',
+                      dest='maxdb',
+                      type='int', default=-30,
+                      help='Waterfall colormap max dB (-170 to -10)')
+    group.add_option('--mindb',
+                      dest='mindb',
+                      type='int', default=-155,
+                      help='Waterfall colormap min dB (-190 to -30)')
+    group.add_option('--wf-auto',
+                      dest='wf_auto',
+                      action='store_true', default=False,
+                      help='Auto set mindb/maxdb')
+    group.add_option('--wf-cal',
+                      dest='wf_cal',
+                      type='int', default=None,
+                      help='Waterfall calibration correction (overrides Kiwi default value)')
+    parser.add_option_group(group)
+
+    group = OptionGroup(parser, "Extension connection options", "")
+    group.add_option('--ext',
+                      dest='extension',
+                      type='string', default=None,
+                      help='Also open a connection to EXTENSION name')
+    group.add_option('--ext-test',
+                      dest='ext_test',
+                      action='store_true', default=False,
+                      help='Start extension in its test mode (if applicable)')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "KiwiSDR development options", "")
     group.add_option('--gc-stats',
                       dest='gc_stats',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Print garbage collection stats')
-    group.add_option('--ext',
-                      dest='extension',
-                      default=None,
-                      type='string',
-                      help='Also open a connection to EXTENSION name')
     group.add_option('--nolocal',
                       dest='nolocal',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Make local network connections appear non-local')
     group.add_option('--no-api',
                       dest='no_api',
-                      default=False,
-                      action='store_true',
+                      action='store_true', default=False,
                       help='Simulate connection to Kiwi using improper/incomplete API')
     parser.add_option_group(group)
 
@@ -795,7 +930,7 @@ def main():
     parser.destroy()
 
     if options.krec_version:
-        print('kiwirecorder v1.0')
+        print('kiwirecorder v1.1')
         sys.exit()
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
@@ -861,6 +996,12 @@ def main():
 
     options.raw = False
     options.rigctl_enabled = False
+    
+    options.maxdb = clamp(options.maxdb, -170, -10)
+    options.mindb = clamp(options.mindb, -190, -30)
+    if options.maxdb <= options.mindb:
+        options.maxdb = options.mindb + 1
+
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
@@ -890,7 +1031,7 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].timestamp))
+            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].ws_timestamp))
             logging.info("started sound recorder %d" % i)
 
         for i,r in enumerate(wf_recorders):
@@ -902,6 +1043,7 @@ def main():
         for i,r in enumerate(ext_recorders):
             if i!=0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
+            time.sleep(3)   # let snd/wf get established first
             r.start()
             logging.info("started extension recorder %d" % i)
 

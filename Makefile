@@ -31,7 +31,7 @@ HP = -s $(HOST) -p $(PORT)
 H2 = -s $(HOST),$(HOST) -p $(PORT)
 H8 = -s $(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST) -p $(PORT)
 
-F = -f 7550
+F = -f $(FREQ)
 F_PB = $F -L -5000 -H 5000
 
 
@@ -68,35 +68,74 @@ wspr2:
 
 
 # DRM
-# IQ and 10 kHz passband required
+# With the "--ext=DRM" argument kiwirecorder requests the Kiwi to start the DRM extension and send
+# decoded DRM audio instead of normal analog audio.
+#
+# 15785 Funklust
+# 3965 Telediffusion de France
+# "--ext-test" uses test file built-in to DRM extension
 
-DRM_COMMON = -m iq -L -5000 -H 5000 --user=DRM-record --log-level=info
-DRM = $(DRM_COMMON) --tlimit=300
+HP_DRM = $(HP)
+#HP_DRM = -s websdr.uk -p 8079
 
-drm:
-	$(KREC) $(HP) -f $(FREQ) $(DRM)
-drm-crash:
-	$(KREC) -s nnsdr.proxy.kiwisdr.com -p 8073 -f 13765 $(DRM_COMMON) --filename=AAC.crash.1.13765.12k.iq
-drm-crash2:
-	$(KREC) -s sysdr.proxy.kiwisdr.com -p 8073 -f 13765 $(DRM_COMMON) --filename=AAC.crash.2.13765.12k.iq
+F_DRM = $(F_PB)
+#F_DRM = -f 15785
+#F_DRM = -f 3965
+#F_DRM = -f 5555 --ext-test
+
+DRM_COMMON = --mode=drm -L -5000 -H 5000 --user=DRM-test --log-level=info
+#DRM_COMMON = --mode=drm -L -5000 -H 5000 --user=DRM-test --log-level=debug
+DRM = $(HP_DRM) $(F_DRM) $(DRM_COMMON) --tlimit=15
+
+drm-info:
+	@echo HP_DRM = $(HP_DRM)
+	@echo F_DRM = $(F_DRM)
+
+# write decoded DRM audio to a file
+drm-snd: drm-info
+	$(KREC) $(DRM) --tlimit=30 --snd --ext=DRM
+
+snd-wf: drm-info
+	$(KREC) $(DRM) --tlimit=15 --snd --wf --z 9 --speed 4 --quiet --wf-png --wf-auto
+
+# show DRM stats (--stats) without writing audio file (--test-mode --quiet)
+drm-stats: drm-info
+	$(KREC) $(DRM) --tlimit=30 --snd --test-mode --quiet --ext=DRM --stats --log-level=warn
+
+# show DRM stats (--stats) with writing audio file
+drm-snd-stats: drm-info
+	$(KREC) $(DRM) --tlimit=30 --snd --ext=DRM --stats --log-level=warn
+
+# record Kiwi waterfall to a .png file, manual setup of WF min/max (no DRM decoding involved here)
+drm-wf: drm-info
+	$(KREC) $(DRM) --tlimit=15 --mode=am --wf --z 9 --speed 4 --quiet --wf-png --mindb -130 --maxdb -60 --wf-auto
+
+# record Kiwi waterfall to a .png file, auto setup of WF min/max (no DRM decoding involved here)
+drm-wf-auto: drm-info
+	$(KREC) $(DRM) --tlimit=15 --mode=am --wf --z 9 --speed 4 --quiet --wf-png --wf-auto
+
+# record Kiwi audio, waterfall and stats
+drm-snd-wf: drm-info
+	$(KREC) $(DRM) --tlimit=30 --snd --quiet --wf --z 9 --speed 4 --wf-png --wf-auto --ext=DRM  --stats --log-level=warn
+
+
+# DRM testing
+
 drm-828:
-	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 828 $(DRM) --filename=Delhi.828.12k.iq
+	$(KREC) $(DRM) -s newdelhi.twrmon.net -f 828 --filename=Delhi.828.12k.iq
 drm-1368:
-	$(KREC) -s newdelhi.twrmon.net -p 8073 -f 1368 $(DRM) --filename=Delhi.1368.12k.iq
+	$(KREC) $(DRM) -s newdelhi.twrmon.net -f 1368 --filename=Delhi.1368.12k.iq
 drm-621:
-	$(KREC) -s bengaluru.twrmon.net -p 8073 -f 621 $(DRM) --filename=Bengaluru.621.12k.iq
-
-#HP_DRM_BUG = -s www -p 8073
-HP_DRM_BUG = -s du6_pe1nsq.proxy.kiwisdr.com -p 8073
-#EXT = DRM
-EXT = SSTV
+	$(KREC) $(DRM) -s bengaluru.twrmon.net -f 621 --filename=Bengaluru.621.12k.iq
 
 drm-bug:
-#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=40 --test-mode --log_level=debug --snd --wf
-#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=4 --test-mode --log_level=debug
-#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --wf
-	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --snd --wf
-#	$(KREC) $(HP_DRM_BUG) -m drm $(F_PB) --tlimit=10 --test-mode --log_level=debug --ext $(EXT) --nolocal
+#	$(KREC) $(DRM) --tlimit=40 --test-mode --snd --wf --z 5
+#	$(KREC) $(DRM) --tlimit=4 --test-mode
+#	$(KREC) $(DRM) --tlimit=10 --test-mode --wf --z 5
+#	$(KREC) $(DRM) --tlimit=10 --test-mode --ext=DRM --wf --z 5
+#	$(KREC) $(DRM) --tlimit=10 --test-mode --ext=DRM
+	$(KREC) $(DRM) --tlimit=60 --test-mode --quiet --snd --ext=DRM
+#	$(KREC) $(DRM) --tlimit=10 --test-mode --ext=DRM --nolocal
 
 
 # see if Dream works using a real-mode stream (it does)
@@ -284,7 +323,7 @@ P_ALE = -f 2784 -m usb -L 300 -H 2700 --station=ALE --resample 8000
 
 ale:
 	$(KREC) $(HP) $(P_ALE) --log_level debug --tlimit=5
-#	$(KREC) $(HP) $(P_ALE) --log_level=debug --tlimit=5 --test-mode --ext ale_2g --snd --wf
+#	$(KREC) $(HP) $(P_ALE) --log_level=debug --tlimit=5 --test-mode --ext ale_2g --snd --wf --z 5
 
 
 # kiwiclientd
@@ -326,11 +365,11 @@ wwvb:
 
 # simulate SuperSDR connection
 ss:
-	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --z 5 --snd
 ssn:
-	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
-	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
-	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --snd --nolocal --pw=up &
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --z 5 --snd --nolocal --pw=up &
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --z 5 --snd --nolocal --pw=up &
+	$(KREC) $(HP) -f 15000 -m usb --user=SuperSDR-sim --log_level=debug --tlimit=10 --test-mode --wf --z 5 --snd --nolocal --pw=up &
 
 
 # process waterfall data
@@ -338,22 +377,26 @@ ssn:
 wf:
 #	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
 	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 
-#	$(KREC) --wf $(HP) -f 9650 -z 4 --log_level debug -u krec-WF --tlimit=60 --cal=-13
+#	$(KREC) --wf $(HP) -f 9650 -z 4 --log_level debug -u krec-WF --tlimit=60
 
 wf2:
 	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
 
 micro:
 #	$(PY) microkiwi_waterfall.py --help
+#	$(PY) microkiwi_waterfall.py $(HP)
 	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 0
+#	$(PY) microkiwi_waterfall.py $(HP) -z 1 -o 7500
+#	$(PY) microkiwi_waterfall.py $(HP) -z 14 -o 7500
+#	$(PY) microkiwi_waterfall.py $(HP) -z 0 -o 28000
 
 
 # stream a Kiwi connection in a "netcat" style fashion
 
 nc:
 #	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=3
-#	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
-	$(PY) kiwi_nc.py -s www -p 8073 -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
+#	$(PY) kiwi_nc.py -s www -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
+	$(PY) kiwi_nc.py -s www -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
 
 # Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
 # since dumphfdl does its own filtering. However the Kiwi HFDL extension does have it so you

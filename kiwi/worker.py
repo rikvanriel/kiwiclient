@@ -75,5 +75,6 @@ class KiwiWorker(threading.Thread):
 
         self._run_event.clear()   # tell all other threads to stop
         self._recorder.close()
+        self._recorder._close_func()
         if self._rigctld:
             self._rigctld.close()
