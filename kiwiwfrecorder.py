@@ -202,6 +202,7 @@ def main():
     opt.S_meter = -1
     opt.ADC_OV = None
     opt.freq_pbc = None
+    opt.wf_cal = None
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(opt.log_level.upper()), format=FORMAT)
@@ -226,7 +227,7 @@ def main():
 
         opt.start_time = time.time()
         opt.ws_timestamp = int(time.time() + os.getpid()+1) & 0xffffffff
-        opt.idx = 1
+        opt.idx = 0
         wf_recorder.start()
 
         consumer.start()

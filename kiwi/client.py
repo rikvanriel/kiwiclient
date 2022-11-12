@@ -287,7 +287,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         if self._kiwi_version >= 1.329:
             self._send_message('SET zoom=%d cf=%f' % (zoom, cf_kHz))
         else:
-            counter = start_frequency_to_counter(cf_kHz - zoom_to_span(zoom)/2)
+            (counter,start_frequency) = self.start_frequency_to_counter(cf_kHz - self.zoom_to_span(zoom)/2)
             self._send_message('SET zoom=%d start=%f' % (zoom, counter))
 
     def zoom_to_span(self, zoom):
@@ -296,7 +296,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         return self.MAX_FREQ/2**zoom
 
     def start_frequency_to_counter(self, start_frequency):
-        """convert a given start frequency in kHz to the counter value used in older 'SET cf=' API needed before v1.329"""
+        """convert a given start frequency in kHz to the counter value used in older 'SET start=' API needed before v1.329"""
         assert(start_frequency >= 0 and start_frequency <= self.MAX_FREQ)
         counter = round(start_frequency/self.MAX_FREQ * 2**self.MAX_ZOOM * self.WF_BINS)
         ## actual start frequency
