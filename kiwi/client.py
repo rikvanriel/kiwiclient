@@ -240,12 +240,20 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def connect(self, host, port):
         self._prepare_stream(host, port, self._type)
 
+    def _apply_freq_offset(self, freq):
+        if hasattr(self, '_freq_offset'):
+            #o_freq = freq
+            freq = freq - self._freq_offset
+            #logging.debug('freq %.2f = %.2f - foff %.0f' % (freq, o_freq, self._freq_offset))
+        return freq
+
     def set_mod(self, mod, lc, hc, freq):
         mod = mod.lower()
         self._modulation = mod
         self._IQ_or_DRM_or_stereo = mod in [ "iq", "drm", "sas", "qam" ]
         self._num_channels = 2 if self._IQ_or_DRM_or_stereo else 1
         logging.debug('set_mod: IQ_or_DRM_or_stereo=%d num_channels=%d' % (self._IQ_or_DRM_or_stereo, self._num_channels))
+        freq = self._apply_freq_offset(freq)
         
         if lc == None or hc == None:
             if mod in self._default_passbands:

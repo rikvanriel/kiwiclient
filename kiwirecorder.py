@@ -163,6 +163,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         freq = options.frequency
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
+        self._freq_offset = options.freq_offset
         self._start_ts = None
         self._start_time = None
         self._squelch = Squelch(self._options) if options.sq_thresh is not None else None
@@ -402,6 +403,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         freq = options.frequency
         #logging.info "%s:%s freq=%d" % (options.server_host, options.server_port, freq)
         self._freq = freq
+        self._freq_offset = options.freq_offset
         self._start_ts = time.gmtime()
         self._start_time = None
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
@@ -443,7 +445,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             self._cmap_b.append(clamp(round(b), 0, 255))
 
     def _setup_rx_params(self):
-        self._set_zoom_cf(self._options.zoom, self._freq)
+        freq = self._apply_freq_offset(self._freq)
+        self._set_zoom_cf(self._options.zoom, freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         self._set_wf_speed(self._options.speed)
         if self._options.no_api:
@@ -455,8 +458,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self.set_name(self._options.user)
         self._start_time = time.time()
         span = self.zoom_to_span(self._options.zoom)
-        start = self._freq - span/2
-        stop  = self._freq + span/2
+        start = freq - span/2
+        stop  = freq + span/2
         if start < 0 or stop > self.MAX_FREQ:
             s = "Frequency and zoom values result in span outside 0 - %d kHz range" % (self.MAX_FREQ)
             raise Exception(s)
@@ -464,7 +467,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             self._options.wf_cal = -13      # pre v1.550 compatibility
         if not self._options.quiet:
             logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
-                  % (start, self._freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
+                  % (start, freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
         if self._options.wf_png is True:
             logging.info("--wf_png: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
 
@@ -478,6 +481,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         return clamp(round(value_percent * 255), 0, 255)
     
     def _process_waterfall_samples(self, seq, samples):
+        freq = self._apply_freq_offset(self._freq)
         nbins = len(samples)
         bins = nbins-1
         i = 0
@@ -506,7 +510,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         
         if not self._options.quiet:
             span = self.zoom_to_span(self._options.zoom)
-            start = self._freq - span/2
+            start = freq - span/2
             logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
                   % (nbins, pmin, start + span*bmin/bins, pmax, start + span*bmax/bins))
 
@@ -768,6 +772,10 @@ def main():
                       dest='freq_pbc',
                       action='store_true', default=False,
                       help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
+    group.add_option('-o', '--offset', '--foffset',
+                      dest='freq_offset',
+                      type='int', default=0,
+                      help='Frequency offset (kHz) subtracted from tuned frequency (for those Kiwis using an offset)')
     group.add_option('-m', '--mode', '--modulation',
                       dest='modulation',
                       type='string', default='am',

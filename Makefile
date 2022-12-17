@@ -127,6 +127,14 @@ drm-1368:
 	$(KREC) $(DRM) -s newdelhi.twrmon.net -f 1368 --filename=Delhi.1368.12k.iq
 drm-621:
 	$(KREC) $(DRM) -s bengaluru.twrmon.net -f 621 --filename=Bengaluru.621.12k.iq
+drm-1044:
+	$(KREC) $(DRM) -s 182.237.12.150.twrmon.net -f 1044 --filename=Bdq.1044.12k.iq
+drm-9620:
+#	$(KREC) $(DRM) -s emeraldsdr.ddns.net -f 9620 --filename=AIR.9620.12k.iq --mode=iq --tlimit=10 --log-level=info
+#	$(KREC) $(DRM) -s emeraldsdr.ddns.net -f 9620 --filename=AIR.9620.12k.drm --ext=DRM --snd --s-meter=0 --sdt-sec=1 --tlimit=30 --log-level=info --ts
+	python3 kiwirecorder.py -s emeraldsdr.ddns.net  -p 8073 -f 9620 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=AIR.9620.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
+drm-5910:
+	python3 kiwirecorder.py -s df0twn.dnsuser.de  -p 8073 -f 5910 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=RRI.5910.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
 
 drm-bug:
 #	$(KREC) $(DRM) --tlimit=40 --test-mode --snd --wf --z 5
@@ -165,7 +173,7 @@ two:
 # Should playback using standard .wav file player
 
 real:
-	$(KREC) $(HP) $(F_PB) --tlimit=10
+	$(KREC) $(HP) $(F_PB) --tlimit=60
 lsb:
 	$(KREC) $(HP) -f 7200 -m lsb --tlimit=10 --log-level=debug
 resample:
@@ -192,6 +200,15 @@ modes:
 	$(KREC) $(HP) -m qam --tlimit=4 --log_level debug
 info:
 	sox --info *.wav
+
+
+# frequency offset
+FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
+#FOFF = -L -100 -H 100 -m iq --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
+
+foff:
+#	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 24000.14 $(FOFF)
+	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 124000.64 -o 100000 $(FOFF)
 
 
 # S-meter
@@ -376,11 +393,11 @@ ssn:
 
 wf:
 #	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
-	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info -u krec-WF --tlimit=5 
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info --tlimit=20  --nolocal
 #	$(KREC) --wf $(HP) -f 9650 -z 4 --log_level debug -u krec-WF --tlimit=60
 
 wf2:
-	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level info -u krec-WF
+	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level debug -u krec-WF
 
 micro:
 #	$(PY) microkiwi_waterfall.py --help

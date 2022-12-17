@@ -90,6 +90,7 @@ class KiwiNetcat(KiwiSDRStream):
         freq = options.frequency
         #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
         self._freq = freq
+        self._freq_offset = options.freq_offset
         self._start_ts = None
         #self._start_time = None
         self._start_time = time.time()
@@ -276,6 +277,10 @@ def main():
                       dest='freq_pbc',
                       action='store_true', default=False,
                       help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
+    group.add_option('-o', '--offset', '--foffset',
+                      dest='freq_offset',
+                      type='int', default=0,
+                      help='Frequency offset (kHz) subtracted from tuned frequency (for those Kiwis using an offset)')
     parser.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
