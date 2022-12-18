@@ -213,6 +213,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._tot_meas_count = self._meas_count = 0
         self._stop = False
         self._need_nl = False
+        self._kiwi_foff = 0
 
         self._default_passbands = {
             "am":  [ -4900, 4900 ],
@@ -241,11 +242,21 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._prepare_stream(host, port, self._type)
 
     def _apply_freq_offset(self, freq):
-        if hasattr(self, '_freq_offset'):
-            #o_freq = freq
-            freq = freq - self._freq_offset
-            #logging.debug('freq %.2f = %.2f - foff %.0f' % (freq, o_freq, self._freq_offset))
-        return freq
+        foffset = 0
+        if hasattr(self, '_freq_offset'):   # in case called from app where it isn't defined
+            if (self._kiwi_foff != 0) and (self._freq_offset != 0) and (self._freq_offset != self._kiwi_foff):
+                s = "The Kiwi's configured frequency offset of %.3f kHz conflicts with -o option frequency offset of %.3f kHz" % (self._kiwi_foff, self._freq_offset)
+                raise Exception(s)
+            foffset = self._freq_offset
+        if self._kiwi_foff != 0:
+            foffset = self._kiwi_foff
+
+        fmin = foffset
+        fmax = foffset + self.MAX_FREQ
+        if freq < fmin or freq > fmax:
+            s = "Current frequency offset not compatible with -f option frequency.\n-f option frequency must be between %.3f and %.3f kHz" % (fmin, fmax)
+            raise Exception(s)
+        return freq - foffset       # API requires baseband freq to always be used
 
     def set_mod(self, mod, lc, hc, freq):
         mod = mod.lower()
@@ -393,6 +404,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
                 raise Exception("Only one DRM instance can be run at a time on this Kiwi")
             self._send_message('SET ext_no_keepalive')      # let server know not to expect async keepalive from us
             self._setup_rx_params()
+        elif name == 'freq_offset':
+            self._kiwi_foff = float(value)
 
     def _process_message(self, tag, body):
         if tag == 'MSG':
