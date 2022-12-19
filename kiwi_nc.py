@@ -277,7 +277,7 @@ def main():
                       dest='freq_pbc',
                       action='store_true', default=False,
                       help='For sideband modes (lsb/lsn/usb/usn/cw/cwn) interpret -f/--freq frequency as the passband center frequency.')
-    group.add_option('-o', '--offset', '--foffset',
+    parser.add_option('-o', '--offset', '--foffset',
                       dest='freq_offset',
                       type='int', default=0,
                       help='Frequency offset (kHz) subtracted from tuned frequency (for those Kiwis using an offset)')
