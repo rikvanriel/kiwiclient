@@ -241,7 +241,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def connect(self, host, port):
         self._prepare_stream(host, port, self._type)
 
-    def _apply_freq_offset(self, freq):
+    def _remove_freq_offset(self, freq):
         foffset = 0
         if hasattr(self, '_freq_offset'):   # in case called from app where it isn't defined
             if (self._kiwi_foff != 0) and (self._freq_offset != 0) and (self._freq_offset != self._kiwi_foff):
@@ -264,7 +264,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._IQ_or_DRM_or_stereo = mod in [ "iq", "drm", "sas", "qam" ]
         self._num_channels = 2 if self._IQ_or_DRM_or_stereo else 1
         logging.debug('set_mod: IQ_or_DRM_or_stereo=%d num_channels=%d' % (self._IQ_or_DRM_or_stereo, self._num_channels))
-        freq = self._apply_freq_offset(freq)
+        baseband_freq = self._remove_freq_offset(freq)
         
         if lc == None or hc == None:
             if mod in self._default_passbands:
@@ -275,9 +275,10 @@ class KiwiSDRStream(KiwiSDRStreamBase):
 
         if self._options.freq_pbc and mod in [ "lsb", "lsn", "usb", "usn", "cw", "cwn" ]:
             pbc = (lc + (hc - lc)/2)/1000
-            logging.debug('set_mod: car_freq=%.2f pbc_offset=%.2f pbc_freq=%.2f' % (freq, pbc, freq - pbc))
+            logging.debug('set_mod: car_freq=%.2f pbc_offset=%.2f pbc_freq=%.2f' % (baseband_freq, pbc, baseband_freq - pbc))
             freq = freq - pbc
-        self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, freq))
+            baseband_freq = baseband_freq - pbc
+        self._send_message('SET mod=%s low_cut=%d high_cut=%d freq=%.3f' % (mod, lc, hc, baseband_freq))
         self._lowcut = lc
         self._highcut = hc
         self._freq = freq

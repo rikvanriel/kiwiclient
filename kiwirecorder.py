@@ -445,8 +445,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             self._cmap_b.append(clamp(round(b), 0, 255))
 
     def _setup_rx_params(self):
-        freq = self._apply_freq_offset(self._freq)
-        self._set_zoom_cf(self._options.zoom, freq)
+        baseband_freq = self._remove_freq_offset(self._freq)
+        self._set_zoom_cf(self._options.zoom, baseband_freq)
         self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
         self._set_wf_speed(self._options.speed)
         if self._options.no_api:
@@ -458,8 +458,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self.set_name(self._options.user)
         self._start_time = time.time()
         span = self.zoom_to_span(self._options.zoom)
-        start = freq - span/2
-        stop  = freq + span/2
+        start = baseband_freq - span/2
+        stop  = baseband_freq + span/2
         if start < 0 or stop > self.MAX_FREQ:
             s = "Frequency and zoom values result in span outside 0 - %d kHz range" % (self.MAX_FREQ)
             raise Exception(s)
@@ -467,7 +467,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             self._options.wf_cal = -13      # pre v1.550 compatibility
         if not self._options.quiet:
             logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
-                  % (start, freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
+                  % (start, baseband_freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
         if self._options.wf_png is True:
             logging.info("--wf_png: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
 
@@ -481,7 +481,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         return clamp(round(value_percent * 255), 0, 255)
     
     def _process_waterfall_samples(self, seq, samples):
-        freq = self._apply_freq_offset(self._freq)
+        baseband_freq = self._remove_freq_offset(self._freq)
         nbins = len(samples)
         bins = nbins-1
         i = 0
@@ -510,7 +510,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         
         if not self._options.quiet:
             span = self.zoom_to_span(self._options.zoom)
-            start = freq - span/2
+            start = baseband_freq - span/2
             logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
                   % (nbins, pmin, start + span*bmin/bins, pmax, start + span*bmax/bins))
 

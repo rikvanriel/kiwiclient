@@ -203,13 +203,13 @@ info:
 
 
 # frequency offset
-#FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
-FOFF = -L 470 -H 530 -m cwn
+FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
+#FOFF = -L 470 -H 530 -m cwn
 #FOFF = -L -100 -H 100 -m iq --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
 
 foff:
-#	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 24000.14 $(FOFF)
-	$(KREC) $(HP) --tlimit=10 -f 124000.14 $(FOFF)
+	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 24000.14 $(FOFF)
+#	$(KREC) $(HP) --tlimit=10 -f 124000.14 $(FOFF)
 #	$(KREC) $(HP) --tlimit=10  -f 124000.64 -o 100000 $(FOFF)
 
 
