@@ -395,11 +395,15 @@ ssn:
 
 wf:
 #	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=5
-	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info --tlimit=20  --nolocal
+	$(KREC) --wf $(HP) -f 5600 -z 10 --log_level info --tlimit=20 --nolocal
 #	$(KREC) --wf $(HP) -f 9650 -z 4 --log_level debug -u krec-WF --tlimit=60
 
 wf2:
 	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level debug -u krec-WF
+
+wf-png:
+	$(KREC) --wf-png --wf-auto $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=60
+#	$(KREC) --wf-png --wf-auto $(HP) -f 4 -z 12 --log_level info -u krec-WF --tlimit=10
 
 micro:
 #	$(PY) microkiwi_waterfall.py --help
@@ -439,6 +443,23 @@ tun:
 	ssh -f -4 -p 1234 -L 2345:localhost:8073 root@$(HOST) sleep 600 &
 	$(PY) kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
 
+# for copying to remote hosts
+EXCLUDE_RSYNC = ".DS_Store" ".git" "__pycache__" "*.pyc" "*.wav" "*.png"
+RSYNC_ARGS = -av --delete $(addprefix --exclude , $(EXCLUDE_RSYNC)) . $(RSYNC_USER)@$(HOST):$(RSYNC_DIR)/$(REPO_NAME)
+
+REPO_NAME = kiwiclient
+RSYNC_USER ?= root
+RSYNC_DIR ?= /root
+PORT ?= 22
+
+ifeq ($(PORT),22)
+	RSYNC = rsync
+else
+	RSYNC = rsync -e "ssh -p $(PORT) -l $(RSYNC_USER)"
+endif
+
+rsync_bit:
+	$(RSYNC) $(RSYNC_ARGS)
 
 help h:
 	@echo HOST = $(HOST)
@@ -452,3 +473,4 @@ clean:
 
 clean_dist: clean
 	-rm -f *.pyc */*.pyc
+	-rm -rf __pycache__ */__pycache__

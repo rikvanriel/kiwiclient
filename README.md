@@ -9,8 +9,9 @@ This is a Python client for KiwiSDR. It allows you to:
 
 Although the code has some backward compatibility with Python2 it is recommended you use Python3.
 
-Make sure the Python package `'numpy'` is installed.
-On many Linux distributions the command would be similar to `'apt install python3-numpy'`
+Make sure the Python package `'numpy'` is installed.  
+On many Linux distributions the command would be similar to `'apt install python3-numpy'`  
+On macOS try `'pip3 install numpy'`
 
 ## Demo code
 

@@ -440,9 +440,9 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
                 g = 0
                 b = (i-184)*128/70
 
-            self._cmap_r.append(clamp(round(r), 0, 255))
-            self._cmap_g.append(clamp(round(g), 0, 255))
-            self._cmap_b.append(clamp(round(b), 0, 255))
+            self._cmap_r.append(clamp(int(round(r)), 0, 255))
+            self._cmap_g.append(clamp(int(round(g)), 0, 255))
+            self._cmap_b.append(clamp(int(round(b)), 0, 255))
 
     def _setup_rx_params(self):
         baseband_freq = self._remove_freq_offset(self._freq)
@@ -478,7 +478,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         fullscale = self._options.maxdb - self._options.mindb
         fullscale = fullscale if fullscale != 0 else 1      # can't be zero
         value_percent = relative_value / fullscale
-        return clamp(round(value_percent * 255), 0, 255)
+        return clamp(int(round(value_percent * 255)), 0, 255)
     
     def _process_waterfall_samples(self, seq, samples):
         baseband_freq = self._remove_freq_offset(self._freq)
@@ -938,7 +938,7 @@ def main():
     parser.destroy()
 
     if options.krec_version:
-        print('kiwirecorder v1.1')
+        print('kiwirecorder v1.2')
         sys.exit()
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
@@ -956,6 +956,10 @@ def main():
 
     if options.tlimit is not None and options.dt != 0:
         print('Warning: --tlimit ignored when --dt-sec option used')
+
+    if options.wf_png is True and options.waterfall is False:
+        options.waterfall = True
+        print('Note: assuming --wf as implied by --wf--png')
 
     ### decode AGC YAML file options
     options.agc_yaml = None
