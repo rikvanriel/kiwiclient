@@ -402,8 +402,7 @@ wf2:
 	$(PY) kiwiwfrecorder.py $(HP) -f $(FREQ) -z 4 --log_level debug -u krec-WF
 
 wf-png:
-	$(KREC) --wf-png --wf-auto $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=60
-#	$(KREC) --wf-png --wf-auto $(HP) -f 4 -z 12 --log_level info -u krec-WF --tlimit=10
+	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=10 --wf-png --mindb=-109 --maxdb=-43
 
 micro:
 #	$(PY) microkiwi_waterfall.py --help

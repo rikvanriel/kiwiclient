@@ -465,9 +465,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             raise Exception(s)
         if self._options.wf_cal is None:
             self._options.wf_cal = -13      # pre v1.550 compatibility
-        if not self._options.quiet:
-            logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
-                  % (start, baseband_freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
+        logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
+              % (start, baseband_freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
         if self._options.wf_png is True:
             logging.info("--wf_png: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
 
@@ -508,7 +507,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         pmax = pwr[length-1]['dBm'] + self._options.wf_cal
         bmax = pwr[length-1]['i']
         
-        if not self._options.quiet:
+        if (not self._options.wf_png and not self._options.quiet) or (self._options.wf_png and self._options.not_quiet):
             span = self.zoom_to_span(self._options.zoom)
             start = baseband_freq - span/2
             logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
@@ -706,6 +705,10 @@ def main():
                       dest='quiet',
                       action='store_true', default=False,
                       help='Don\'t print progress messages')
+    parser.add_option('--nq', '--not-quiet',
+                      dest='not_quiet',
+                      action='store_true', default=False,
+                      help='Print progress messages')
     parser.add_option('-d', '--dir',
                       dest='dir',
                       type='string', default=None,
@@ -875,7 +878,7 @@ def main():
                       help='Zoom level 0-14')
     group.add_option('--speed',
                       dest='speed',
-                      type='int', default=1,
+                      type='int', default=0,
                       help='Waterfall update speed: 1=1Hz, 2=slow, 3=med, 4=fast')
     group.add_option('--interp',
                       dest='interp',
@@ -957,9 +960,14 @@ def main():
     if options.tlimit is not None and options.dt != 0:
         print('Warning: --tlimit ignored when --dt-sec option used')
 
-    if options.wf_png is True and options.waterfall is False:
-        options.waterfall = True
-        print('Note: assuming --wf as implied by --wf--png')
+    if options.wf_png is True:
+        if options.waterfall is False:
+            options.waterfall = True
+            print('Note: assuming --wf as implied by --wf--png')
+        if options.speed == 0:
+            options.speed = 4
+            print('Note: no --speed specified, so using fast (=4)')
+        options.quite = True    # specify "--not-quiet" to see all progress messages during --wf-png
 
     ### decode AGC YAML file options
     options.agc_yaml = None

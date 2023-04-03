@@ -338,6 +338,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET wf_comp=%d' % (1 if comp else 0))
 
     def _set_wf_speed(self, speed):
+        if speed == 0:
+            speed = 1
         assert(speed >= 1 and speed <= 4)
         self._send_message('SET wf_speed=%d' % speed)
 
