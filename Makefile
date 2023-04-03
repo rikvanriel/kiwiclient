@@ -404,6 +404,9 @@ wf2:
 wf-png:
 	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=10 --wf-png --mindb=-109 --maxdb=-43
 
+wf-peaks:
+	$(KREC) --wf $(HP) -f 1000 -z 4 --log_level info -u krec-WF --tlimit=5 --mindb=-100 --maxdb=-20 --nq --speed=1 --wf-peaks=4
+
 micro:
 #	$(PY) microkiwi_waterfall.py --help
 #	$(PY) microkiwi_waterfall.py $(HP)
@@ -468,7 +471,7 @@ help h:
 	$(KREC) --help
 
 clean:
-	-rm -f *.log *.wav *.png *.npy
+	-rm -f *.log *.wav *.png *.txt *.npy
 
 clean_dist: clean
 	-rm -f *.pyc */*.pyc

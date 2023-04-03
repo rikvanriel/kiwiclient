@@ -360,7 +360,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             with open(self._get_output_filename(), 'wb') as fp:
                 _write_wav_header(fp, 100, int(self._output_sample_rate), self._num_channels, self._options.is_kiwi_wav)
             if self._options.is_kiwi_tdoa:
-                # NB: MUST be a print (i.e. not a logging.info)
+                # NB for TDoA support: MUST be a print (i.e. not a logging.info)
                 print("file=%d %s" % (self._options.idx, self._get_output_filename()))
             else:
                 logging.info("Started a new file: %s" % self._get_output_filename())
@@ -486,7 +486,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         i = 0
         pwr = []
         pixels = array.array('B')
-        wf_ok = self._options.wf_png and (not self._options.wf_auto or (self._options.wf_auto and self.wf_pass != 0))
+        do_wf = self._options.wf_png and (not self._options.wf_auto or (self._options.wf_auto and self.wf_pass != 0))
 
         for s in samples:
             dBm = s - 255
@@ -494,7 +494,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
                 pwr.append({ 'dBm':dBm, 'i':i })
             i = i+1
             
-            if wf_ok:
+            if do_wf:
                 ci = self._waterfall_color_index_max_min(s)
                 pixels.append(self._cmap_r[ci])
                 pixels.append(self._cmap_g[ci])
@@ -506,12 +506,19 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         bmin = pwr[0]['i']
         pmax = pwr[length-1]['dBm'] + self._options.wf_cal
         bmax = pwr[length-1]['i']
+        span = self.zoom_to_span(self._options.zoom)
+        start = baseband_freq - span/2
         
         if (not self._options.wf_png and not self._options.quiet) or (self._options.wf_png and self._options.not_quiet):
-            span = self.zoom_to_span(self._options.zoom)
-            start = baseband_freq - span/2
-            logging.info("wf samples: %d bins, min %d dB @ %.1f kHz, max %d dB @ %.1f kHz"
+            logging.info("wf samples: %d bins, min %d dB @ %.2f kHz, max %d dB @ %.2f kHz"
                   % (nbins, pmin, start + span*bmin/bins, pmax, start + span*bmax/bins))
+
+        if self._options.wf_peaks > 0:
+            with open(self._get_output_filename("_peaks.txt"), 'a') as fp:
+                for i in range(self._options.wf_peaks):
+                    j = length-1-i
+                    fp.write("%.2f %d " % (start + span*pwr[j]['i']/bins, pwr[j]['dBm'] + self._options.wf_cal))
+                fp.write("\n")
 
         if self._options.wf_png and self._options.wf_auto and self.wf_pass == 0:
             noise = pwr[int(0.50 * length)]['dBm']
@@ -525,12 +532,14 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             self._options.maxdb = signal
             logging.info("--wf_auto: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
         self.wf_pass = self.wf_pass+1
-        if wf_ok is True:
+        if do_wf is True:
             self._rows.append(pixels)
 
     def _close_func(self):
         if self._options.wf_png is True:
             self._flush_rows()
+        if self._options.wf_peaks > 0:
+            logging.info("--wf-peaks: writing to file %s" % self._get_output_filename("_peaks.txt"));
 
     def _flush_rows(self):
         if not self._rows:
@@ -582,13 +591,13 @@ class KiwiExtensionRecorder(KiwiSDRStream):
     def _process_ext(self, name, value):
         if self._options.extension == 'DRM':
             if self._options.stats and name == "drm_status_cb":
-                self._process_ext_msg(False, None, value);
+                self._process_ext_msg(False, None, value)
             elif name != "drm_status_cb" and name != "drm_bar_pct" and name != "annotate":
-                self._process_ext_msg(True, name, value);
+                self._process_ext_msg(True, name, value)
             if name == "locked" and value != "1":
                 raise Exception("No DRM when Kiwi running other extensions or too many connections active")
         else:
-            self._process_ext_msg(True, name, value);
+            self._process_ext_msg(True, name, value)
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
@@ -888,6 +897,10 @@ def main():
                       dest='wf_png',
                       action='store_true', default=False,
                       help='Create waterfall .png file. --station and --filename options apply')
+    group.add_option('--wf-peaks',
+                      dest='wf_peaks',
+                      type='int', default=0,
+                      help='Save specified number of waterfall peaks to file. --station and --filename options apply')
     group.add_option('--maxdb',
                       dest='maxdb',
                       type='int', default=-30,
@@ -1082,7 +1095,7 @@ def main():
 
     if gopt.is_kiwi_tdoa:
       for i,opt in enumerate(options):
-          # NB: MUST be a print (i.e. not a logging.info)
+          # NB for TDoA support: MUST be a print (i.e. not a logging.info)
           print("status=%d,%d" % (i, opt.status))
 
     if gopt.gc_stats:
