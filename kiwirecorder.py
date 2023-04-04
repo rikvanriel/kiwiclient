@@ -517,7 +517,9 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
             with open(self._get_output_filename("_peaks.txt"), 'a') as fp:
                 for i in range(self._options.wf_peaks):
                     j = length-1-i
-                    fp.write("%.2f %d " % (start + span*pwr[j]['i']/bins, pwr[j]['dBm'] + self._options.wf_cal))
+                    bin_i = pwr[j]['i']
+                    bin_f = float(bin_i)/bins
+                    fp.write("%d %.2f %d  " % (bin_i, start + span*bin_f, pwr[j]['dBm'] + self._options.wf_cal))
                 fp.write("\n")
 
         if self._options.wf_png and self._options.wf_auto and self.wf_pass == 0:
@@ -539,7 +541,7 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         if self._options.wf_png is True:
             self._flush_rows()
         if self._options.wf_peaks > 0:
-            logging.info("--wf-peaks: writing to file %s" % self._get_output_filename("_peaks.txt"));
+            logging.info("--wf-peaks: writing to file %s" % self._get_output_filename("_peaks.txt"))
 
     def _flush_rows(self):
         if not self._rows:
@@ -889,9 +891,9 @@ def main():
                       dest='speed',
                       type='int', default=0,
                       help='Waterfall update speed: 1=1Hz, 2=slow, 3=med, 4=fast')
-    group.add_option('--interp',
+    group.add_option('--interp', '--wf-interp',
                       dest='interp',
-                      type='int', default=13,
+                      type='int', default=-1,
                       help='Waterfall display interpolation 0-13')
     group.add_option('--wf-png',
                       dest='wf_png',
@@ -976,11 +978,16 @@ def main():
     if options.wf_png is True:
         if options.waterfall is False:
             options.waterfall = True
-            print('Note: assuming --wf as implied by --wf--png')
+            print('--wf-png note: assuming --wf')
         if options.speed == 0:
             options.speed = 4
-            print('Note: no --speed specified, so using fast (=4)')
+            print('--wf-png note: no --speed specified, so using fast (=4)')
         options.quite = True    # specify "--not-quiet" to see all progress messages during --wf-png
+
+    if options.wf_peaks > 0:
+        if options.interp == -1:
+            options.interp = 10
+            print('--wf-peaks note: no --wf-interp specified, so using MAX+CIC (=10)')
 
     ### decode AGC YAML file options
     options.agc_yaml = None

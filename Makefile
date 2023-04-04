@@ -405,7 +405,8 @@ wf-png:
 	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=10 --wf-png --mindb=-109 --maxdb=-43
 
 wf-peaks:
-	$(KREC) --wf $(HP) -f 1000 -z 4 --log_level info -u krec-WF --tlimit=5 --mindb=-100 --maxdb=-20 --nq --speed=1 --wf-peaks=4
+	$(KREC) --wf $(HP) -f 15000 -z 0 --log_level info -u krec-WF --tlimit=2 --mindb=-100 --maxdb=-20 --nq --speed=1 --wf-peaks=5
+#	$(KREC) --wf $(HP) -f 1000 -z 4 --log_level info -u krec-WF --tlimit=5 --mindb=-100 --maxdb=-20 --nq --speed=1 -wf-peaks=5
 
 micro:
 #	$(PY) microkiwi_waterfall.py --help

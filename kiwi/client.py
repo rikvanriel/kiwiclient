@@ -344,6 +344,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET wf_speed=%d' % speed)
 
     def _set_wf_interp(self, interp):
+        if interp == -1:
+            interp = 13     # drop sampling + CIC compensation (Kiwi UI default)
         assert((interp >= 0 and interp <= 4) or (interp >=10 and interp <= 14))
         self._send_message('SET interp=%d' % interp)
     
