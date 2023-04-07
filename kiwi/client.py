@@ -95,6 +95,8 @@ class KiwiError(Exception):
     pass
 class KiwiTooBusyError(KiwiError):
     pass
+class KiwiRedirectError(KiwiError):
+    pass
 class KiwiDownError(KiwiError):
     pass
 class KiwiBadPasswordError(KiwiError):
@@ -367,13 +369,17 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             self._on_gnss_position(self._gps_pos)
         else:
             logging.debug("recv MSG (%s) %s: %s", self._stream_name, name, value)
+
         # Handle error conditions
         if name == 'too_busy':
             raise KiwiTooBusyError('%s: all %s client slots taken' % (self._options.server_host, value))
+        if name == 'redirect':
+            raise KiwiRedirectError(urllib.unquote(value))
         if name == 'badp' and value == '1':
             raise KiwiBadPasswordError('%s: bad password' % self._options.server_host)
         if name == 'down':
             raise KiwiDownError('%s: server is down atm' % self._options.server_host)
+
         # Handle data items
         if name == 'audio_rate':
             self._set_ar_ok(int(value), 44100)

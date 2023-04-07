@@ -4,7 +4,7 @@ import logging
 import threading
 from traceback import print_exc
 
-from .client import KiwiTooBusyError, KiwiTimeLimitError, KiwiServerTerminatedConnection
+from .client import KiwiTooBusyError, KiwiRedirectError, KiwiTimeLimitError, KiwiServerTerminatedConnection
 from .rigctld import Rigctld
 
 class KiwiWorker(threading.Thread):
@@ -64,6 +64,19 @@ class KiwiWorker(threading.Thread):
                     self._options.status = 2
                     break
                 self._event.wait(timeout=15)
+                continue
+            except KiwiRedirectError as e:
+                prev = self._options.server_host +':'+ str(self._options.server_port)
+                # http://host:port
+                #        ^^^^ ^^^^
+                uri = str(e).split(':')
+                self._options.server_host = uri[1][2:]
+                self._options.server_port = uri[2]
+                logging.warn("%s too busy now. Redirecting to %s:%s" % (prev, self._options.server_host, self._options.server_port))
+                if self._options.is_kiwi_tdoa:
+                    self._options.status = 2
+                    break
+                self._event.wait(timeout=2)
                 continue
             except KiwiTimeLimitError:
                 break
