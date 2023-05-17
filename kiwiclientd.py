@@ -277,7 +277,7 @@ def get_comma_separated_args(option, opt, value, parser, fn):
 
 def join_threads(snd):
     [r._event.set() for r in snd]
-    [t.join() for t in threading.enumerate() if t is not threading.currentThread()]
+    [t.join() for t in threading.enumerate() if t is not threading.current_thread()]
 
 def main():
     # extend the OptionParser so that we can print multiple paragraphs in

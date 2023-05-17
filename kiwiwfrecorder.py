@@ -151,7 +151,7 @@ class Consumer(threading.Thread):
 
 def join_threads(threads):
     [t._event.set() for t in threads]
-    [t.join()       for t in threading.enumerate() if t is not threading.currentThread()]
+    [t.join()       for t in threading.enumerate() if t is not threading.current_thread()]
 
 def main():
     parser = OptionParser()

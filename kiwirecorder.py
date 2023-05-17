@@ -456,17 +456,18 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
         self._set_wf_comp(False)
         self._set_wf_interp(self._options.interp)
         self.set_name(self._options.user)
+
         self._start_time = time.time()
         span = self.zoom_to_span(self._options.zoom)
         start = baseband_freq - span/2
         stop  = baseband_freq + span/2
+        if self._options.wf_cal is None:
+            self._options.wf_cal = -13      # pre v1.550 compatibility
+        logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, zoom %d, span %d kHz, rbw %.3f kHz, cal %d dB"
+              % (start, baseband_freq, stop, self._options.zoom, span, span/self.WF_BINS, self._options.wf_cal))
         if start < 0 or stop > self.MAX_FREQ:
             s = "Frequency and zoom values result in span outside 0 - %d kHz range" % (self.MAX_FREQ)
             raise Exception(s)
-        if self._options.wf_cal is None:
-            self._options.wf_cal = -13      # pre v1.550 compatibility
-        logging.info("wf samples: start|center|stop %.1f|%.1f|%.1f kHz, span %d kHz, rbw %.3f kHz, cal %d dB"
-              % (start, baseband_freq, stop, span, span/self.WF_BINS, self._options.wf_cal))
         if self._options.wf_png is True:
             logging.info("--wf_png: mindb %d, maxdb %d, cal %d dB" % (self._options.mindb, self._options.maxdb, self._options.wf_cal))
 
@@ -631,7 +632,7 @@ def join_threads(snd, wf, ext):
     [r._event.set() for r in snd]
     [r._event.set() for r in wf]
     [r._event.set() for r in ext]
-    [t.join() for t in threading.enumerate() if t is not threading.currentThread()]
+    [t.join() for t in threading.enumerate() if t is not threading.current_thread()]
 
 def main():
     # extend the OptionParser so that we can print multiple paragraphs in
