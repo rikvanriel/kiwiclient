@@ -360,6 +360,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _process_msg_param(self, name, value):
         if name == 'extint_list_json':
             value = urllib.unquote(value)
+
         if name == 'load_cfg':
             logging.debug("load_cfg: (cfg info not printed)")
             d = json.loads(urllib.unquote(value))
@@ -367,6 +368,13 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             if self._options.idx == 0:
                 logging.info("GNSS position: lat,lon=[%+6.2f, %+7.2f]" % (self._gps_pos[0], self._gps_pos[1]))
             self._on_gnss_position(self._gps_pos)
+            return
+        elif name == 'load_dxcfg':
+            logging.debug("load_dxcfg: (cfg info not printed)")
+            return
+        elif name == 'load_dxcomm_cfg':
+            logging.debug("load_dxcomm_cfg: (cfg info not printed)")
+            return
         else:
             logging.debug("recv MSG (%s) %s: %s", self._stream_name, name, value)
 
