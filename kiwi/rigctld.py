@@ -179,6 +179,12 @@ class Rigctld(object):
             return "RPRT 0\n"
         elif command.startswith('\chk_vfo'):
             return "0\n"
+        elif command.startswith('\get_lock_mode'):
+            # unlocked
+            return "2\n"
+        elif command.startswith('\get_powerstat'):
+            # always report that power is on
+            return "1\n"
         elif command.startswith('\dump_state'):
             return self._dump_state()
         elif command.startswith('f'):
@@ -199,6 +205,9 @@ class Rigctld(object):
             return "0\nVFOA\n"
         elif command.startswith('v'):
             return "VFOA\n"
+        elif command.startswith('V'):
+            # We cannot switch the VFO on a single kiwisdr channel
+            return "RPRT 0\n"
             
         print("Received unknown command: ", command)
         return "RPRT 0\n"
