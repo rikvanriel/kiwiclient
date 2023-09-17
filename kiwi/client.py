@@ -293,7 +293,14 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET squelch=%d max=%d' % (sq, thresh))
 
     def set_noise_blanker(self, gate, thresh):
-        self._send_message('SET nb=%d th=%d' % (gate, thresh))
+        # nb_algo(1) = NB_STD, type(0) = NB_BLANKER, type(2) = NB_CLICK
+        self._send_message('SET nb algo=1')     # NB: setting algo clears all enables
+        self._send_message('SET nb type=0 param=0 pval=%d' % gate)
+        self._send_message('SET nb type=0 param=1 pval=%d' % thresh)
+        self._send_message('SET nb type=0 en=%d' % (1 if self._options.nb else 0))
+        self._send_message('SET nb type=2 param=0 pval=1')
+        self._send_message('SET nb type=2 param=1 pval=1')
+        self._send_message('SET nb type=2 en=%d' % (1 if self._options.nb_test else 0))
 
     def set_de_emp(self, de_emp):
         self._send_message('SET de_emp=%d' % de_emp)

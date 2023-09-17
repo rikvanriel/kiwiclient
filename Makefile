@@ -96,7 +96,7 @@ drm-snd: drm-info
 	$(KREC) $(DRM) --tlimit=30 --snd --ext=DRM
 
 snd-wf: drm-info
-	$(KREC) $(DRM) --tlimit=15 --snd --wf --z 9 --speed 4 --quiet --wf-png --wf-auto
+	$(KREC) $(DRM) --tlimit=15 --snd --wf --z 9 --speed 4 --quiet --wf-png --wf-auto --log-level=debug
 
 # show DRM stats (--stats) without writing audio file (--test-mode --quiet)
 drm-stats: drm-info
@@ -173,11 +173,11 @@ two:
 # Should playback using standard .wav file player
 
 real:
-	$(KREC) $(HP) $(F_PB) --tlimit=60
+	$(KREC) $(HP) $(F_PB) --tlimit=10
 lsb:
 	$(KREC) $(HP) -f 7200 -m lsb --tlimit=10 --log-level=debug
 resample:
-	$(KREC) $(HP) $(F_PB) -r 6000 --tlimit=10
+	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=10
 resample_iq:
 	$(KREC) $(HP) $(F_PB) -r 6000 -m iq --tlimit=10
 ncomp:
@@ -187,6 +187,8 @@ rx8:
 	$(KREC) $(H8) $(F_PB) -u krec-RX8
 nb:
 	$(KREC) $(HP) $F -m usb --tlimit=10 --nb --nb-gate=200 --nb-th=40
+nbtest:
+	$(KREC) $(HP) $F -m usb --tlimit=10 --nb-test --nb --nb-gate=256 --nb-th=16
 2sec:
 	$(KREC) $(HP) $(F_PB) -q --log-level=info --dt-sec=2 
 debug:
@@ -248,7 +250,7 @@ smsi:
 # TDoA debugging
 
 tdoa:
-	$(PY) -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=10 -u krec-TDoA --log-level=warn
+	$(PY) -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=30 -u TDoA_service --log-level=debug --nolocal
 
 
 # test reported problem situations
@@ -334,7 +336,7 @@ gps2:
 # Should playback using standard .wav file player
 
 iq:
-	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level info
+	$(KREC) $(HP) $(F_PB) -m iq --tlimit=10 --log_level=debug -r 12000
 
 
 # ALE 2G testing

@@ -201,7 +201,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         if self._options.compression is False:
             self._set_snd_comp(False)
 
-        if self._options.nb is True:
+        if self._options.nb is True or self._options.nb_test is True:
             gate = self._options.nb_gate
             if gate < 100 or gate > 5000:
                 gate = 100
@@ -837,7 +837,7 @@ def main():
     group.add_option('--nb',
                       dest='nb',
                       action='store_true', default=False,
-                      help='Enable noise blanker with default parameters.')
+                      help='Enable standard noise blanker with default parameters.')
     group.add_option('--nb-gate',
                       dest='nb_gate',
                       type='int', default=100,
@@ -846,6 +846,10 @@ def main():
                       dest='nb_thresh',
                       type='int', default=50,
                       help='Noise blanker threshold in percent (0 to 100, default 50)')
+    group.add_option('--nb-test',
+                      dest='nb_test',
+                      action='store_true', default=False,
+                      help='Enable noise blanker test mode.')
     group.add_option('--de-emp',
                       dest='de_emp',
                       action='store_true', default=False,
