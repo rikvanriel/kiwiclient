@@ -204,7 +204,7 @@ modes:
 
 # resampling
 resample:
-	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=5 -q
+	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=5
 resample_iq:
 	$(KREC) $(HP) $(F_PB) -r 6000 -m iq --tlimit=5
 

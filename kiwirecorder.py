@@ -234,7 +234,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             if not HAS_RESAMPLER:
                 self._output_sample_rate = self._options.resample
                 self._ratio = float(self._output_sample_rate)/self._sample_rate
-                logging.warning("CAUTION: libsamplerate not available; linear interpolation will be used for low-quality resampling.")
+                logging.warning("CAUTION: libsamplerate not available; low-quality linear interpolation will be used for resampling.")
                 logging.warning("See the README file instructions to build the Kiwi samplerate module.")
                 logging.warning('resampling from %g to %d Hz (ratio=%f)' % (self._sample_rate, self._options.resample, self._ratio))
             else:
