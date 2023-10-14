@@ -171,6 +171,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self._squelch = [Squelch(options).set_threshold(options.scan_yaml['threshold']) for _ in range(len(options.scan_yaml['frequencies']))]
         self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
         self._resampler = None
+        self._kiwi_samplerate = False
         self._gnss_performance = GNSSPerformance()
 
     def set_freq(self, freq):
@@ -225,24 +226,35 @@ class KiwiSoundRecorder(KiwiSDRStream):
         if self._options.test_mode:
             self._set_stats()
 
+        if self._options.resample > 0 and not HAS_RESAMPLER:
+            self._setup_resampler()
+
+    def _setup_resampler(self):
         if self._options.resample > 0:
             if not HAS_RESAMPLER:
                 self._output_sample_rate = self._options.resample
                 self._ratio = float(self._output_sample_rate)/self._sample_rate
-                logging.info("libsamplerate not available: linear interpolation is used for low-quality resampling. "
-                             "(pip/pip3 install samplerate)")
-                logging.info('resampling from %g to %d Hz (ratio=%f)' % (self._sample_rate, self._options.resample, self._ratio))
+                logging.warning("CAUTION: libsamplerate not available; linear interpolation will be used for low-quality resampling.")
+                logging.warning("See the README file instructions to build the Kiwi samplerate module.")
+                logging.warning('resampling from %g to %d Hz (ratio=%f)' % (self._sample_rate, self._options.resample, self._ratio))
             else:
-                fs = 10*round(self._sample_rate/10) ## rounded sample rate
-                ratio = self._options.resample / fs
-                ## work around a bug in python-libsamplerate:
-                ##  the following makes sure that ratio * 512 is an integer
-                ##  at the expense of resampling frequency precision for some resampling frequencies (it's ok for 375 Hz)
-                n = 512 ## KiwiSDR block length for samples
-                m = round(ratio*n)
-                self._ratio = m/n
+                if hasattr(self._resampler, 'kiwi_samplerate'):
+                    self._kiwi_samplerate = True
+                if self._kiwi_samplerate is True:
+                    logging.warning("Using Kiwi high-quality samplerate module.")
+                    self._ratio = self._options.resample / self._sample_rate
+                else:
+                    ## work around a bug in python-samplerate:
+                    ##  the following makes sure that ratio * 512 is an integer
+                    ##  at the expense of resampling frequency precision for some resampling frequencies (it's ok for 375 Hz)
+                    fs = 10*round(self._sample_rate/10) ## rounded sample rate
+                    ratio = self._options.resample / fs
+                    n = 512 ## KiwiSDR block length for samples
+                    m = round(ratio*n)
+                    self._ratio = m/n
+                    logging.warning('CAUTION: using python-samplerate instead of Kiwi samplerate module containing fixes.')
                 self._output_sample_rate = self._ratio * self._sample_rate
-                logging.info('resampling from %g to %g Hz (ratio=%f)' % (self._sample_rate, self._output_sample_rate, self._ratio))
+                logging.warning('resampling from %g to %g Hz (ratio=%f)' % (self._sample_rate, self._output_sample_rate, self._ratio))
 
     def _squelch_status(self, seq, samples, rssi):
         if not self._options.quiet:
@@ -293,6 +305,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 ## libsamplerate resampling
                 if self._resampler is None:
                     self._resampler = Resampler(converter_type='sinc_best')
+                    self._setup_resampler()
                 samples = np.round(self._resampler.process(samples, ratio=self._ratio)).astype(np.int16)
             else:
                 ## resampling by linear interpolation
@@ -319,6 +332,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
                 ## libsamplerate resampling
                 if self._resampler is None:
                     self._resampler = Resampler(channels=2, converter_type='sinc_best')
+                    self._setup_resampler()
                 s = self._resampler.process(s.reshape(len(samples),2), ratio=self._ratio)
                 s = np.round(s.flatten()).astype(np.int16)
             else:

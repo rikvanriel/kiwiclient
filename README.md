@@ -7,11 +7,29 @@ This is a Python client for KiwiSDR. It allows you to:
 
 ## Dependencies
 
-Although the code has some backward compatibility with Python2 it is recommended you use Python3.
+It is strongly recommended you use Python3.
 
 Make sure the Python package `'numpy'` is installed.  
 On many Linux distributions the command would be similar to `'apt install python3-numpy'`  
-On macOS try `'pip3 install numpy'`
+On macOS try `'pip3 install numpy'` or perhaps `'python3 -m pip install numpy'`
+
+## Resampling
+
+If you want high-quality resampling based on libsamplerate (SRC) you must build the version
+contained in KiwiClient that has fixes rather than using the standard python-samplerate package.
+Follow these steps:
+* Install the Python package `'cffi'`
+* Install the `'libsamplerate'` library using your system's package manager.
+Note: this is not the Python package `'samplerate'` but the native code library `'libsamplerate'`
+(e.g. x86\_64 or arm64).
+    * Windows: download from `'github.com/libsndfile/libsamplerate/releases'`
+    * Linux: use a package manager: `'apt install libsamplerate'`
+    * macOS: use a package manager like brew: `'brew install libsamplerate'`
+* Run the samplerate module builder `'make samplerate_build'`.
+This generates a Python wrapper around `'libsamplerate'` in the file `'samplerate/_src.py'`
+* Test by running `'make samplerate_test'`
+
+If the samplerate module is not found then low-quality resampling based on linear interpolation.
 
 ## Demo code
 
@@ -49,10 +67,10 @@ It provides the following methods which can be used in derived classes:
 * `_process_waterfall_samples(self, seq, samples)`: waterfall data
 
 ### kiwirecorder.py
-* Can record audio data, IQ samples, and waterfall data (work in progress).
-* The complete list of options can be obtained by `python kiwirecorder.py --help`.
+* Can record audio data, IQ samples, and waterfall data.
+* The complete list of options can be obtained by `python3 kiwirecorder.py --help`.
 * It is possible to record from more than one KiwiSDR simultaneously, see again `--help`.
-* For recording IQ samples there is the `-w` or `--kiwi-wav` option: this write	a .wav file which includes GNSS	timestamps (see below).
+* For recording IQ samples there is the `-w` or `--kiwi-wav` option: this writes	a .wav file which includes GNSS	timestamps (see below).
 * AGC options can be specified in a YAML-formatted file, `--agc-yaml` option, see `default_agc.yaml`. Note that this option needs PyYAML to be installed
 
 ## IQ .wav files with GNSS timestamps
@@ -62,5 +80,5 @@ It provides the following methods which can be used in derived classes:
 * If a directory with name `gnss_pos/` exists, a text file `gnss_pos/[name].txt` will be created which contains latitude and longitude as provided by the KiwiSDR; existing files are overwritten.
 
 ### Working with the recorded .wav files
-* There is an octave extension for reading such WAV files, see `read_kiwi_wav.cc` where the details of the non-standard WAV chunk can be found; it needs to be compiled in this way `mkoctfile read_kiwi_wav.cc`.
+* There is an octave extension for reading such WAV files, see `read_kiwi_wav.cc` where the details of the non-standard WAV chunk can be found; it needs to be compiled in this way: `mkoctfile read_kiwi_wav.cc`.
 * For using read_kiwi_wav an octave function `proc_kiwi_iq_wav.m` is provided; type `help proc_kiwi_iq_wav` in octave for documentation.

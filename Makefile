@@ -2,8 +2,6 @@
 # Example uses of kiwirecorder.py and kiwifax.py
 #
 
-#PY = python
-#PY = python2
 PY = python3
 
 # set global environment variables KIWI_HOST and KIWI_PORT to the Kiwi you want to work with
@@ -25,6 +23,12 @@ else
     FREQ = $(KIWI_FREQ)
 endif
 
+ifeq ($(KIWI_MODE_PB)x,x)
+    MODE_PB = -m am -L -5000 -H 5000
+else
+    MODE_PB = $(KIWI_MODE_PB)
+endif
+
 KREC = $(PY) kiwirecorder.py
 
 HP = -s $(HOST) -p $(PORT)
@@ -32,7 +36,7 @@ H2 = -s $(HOST),$(HOST) -p $(PORT)
 H8 = -s $(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST),$(HOST) -p $(PORT)
 
 F = -f $(FREQ)
-F_PB = $F -L -5000 -H 5000
+F_PB = $F $(MODE_PB)
 
 
 # process control help
@@ -176,10 +180,6 @@ real:
 	$(KREC) $(HP) $(F_PB) --tlimit=10
 lsb:
 	$(KREC) $(HP) -f 7200 -m lsb --tlimit=10 --log-level=debug
-resample:
-	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=10
-resample_iq:
-	$(KREC) $(HP) $(F_PB) -r 6000 -m iq --tlimit=10
 ncomp:
 	$(KREC) $(HP) $(F_PB) --ncomp
 rx8:
@@ -200,6 +200,19 @@ modes:
 	$(KREC) $(HP) -m sal --tlimit=4 --log_level debug
 	$(KREC) $(HP) -m sas --tlimit=4 --log_level debug
 	$(KREC) $(HP) -m qam --tlimit=4 --log_level debug
+
+
+# resampling
+resample:
+	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=5 -q
+resample_iq:
+	$(KREC) $(HP) $(F_PB) -r 6000 -m iq --tlimit=5
+
+samplerate_build:
+	@echo "See README file for complete build instructions."
+	$(PY) samplerate/samplerate_build.py
+samplerate_test:
+	pytest --capture=tee-sys samplerate/tests/test_samplerate.py
 info:
 	sox --info *.wav
 
