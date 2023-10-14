@@ -9,8 +9,6 @@ from ctypes.util import find_library as _find_library
 
 import numpy as _np
 
-kiwi_version = 'kiwi_version'
-
 # Locate and load libsamplerate
 from samplerate._src import ffi
 lib_basename = 'libsamplerate'
@@ -206,8 +204,7 @@ def _src_input_callback(cb_data, data):
 
     # Check whether the correct number of channels is supplied by user.
     if cb_data['channels'] != channels:
-        print("===============> %d %d" % (cb_data['channels'], channels))
-        raise ValueError("Invalid number of channels in callback: cb_data['channels']=%d channels=%d" % (cb_data['channels'], channels))
+        raise ValueError('Invalid number of channels in callback.')
 
     # Store a reference of the input data to ensure it is still alive when
     # accessed by libsamplerate.

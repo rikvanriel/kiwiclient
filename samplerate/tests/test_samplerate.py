@@ -7,6 +7,7 @@ import sys, os
 sys.path.insert(0, os.path.abspath('.'))
 import samplerate
 
+
 @pytest.fixture(scope="module", params=[1, 2])
 def data(request):
     num_channels = request.param
@@ -66,6 +67,5 @@ def test_callback(data, converter_type, ratio=2.0):
 
     callback = lambda p=producer(): next(p)
 
-    with CallbackResampler(callback, ratio, converter_type) as resampler:
-        print("===============> CallbackResampler")
+    with CallbackResampler(callback, ratio, converter_type, channels=num_channels) as resampler:
         resampler.read(int(ratio) * input_data.shape[0])
