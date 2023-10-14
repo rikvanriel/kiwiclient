@@ -16,8 +16,8 @@ On macOS try `'pip3 install numpy'` or perhaps `'python3 -m pip install numpy'`
 ## Resampling
 
 If you want high-quality resampling based on libsamplerate (SRC) you should build the version
-contained in KiwiClient that has fixes rather than using the standard python-samplerate package.
-Follow these steps:
+contained in KiwiClient that has fixes rather than using the standard python-samplerate package.  
+Follow these steps. Ask on the Kiwi forum if you have problems: `'forum.kiwisdr.com'`
 * Install the Python package `'cffi'`
 * Install the `'libsamplerate'` library using your system's package manager.
 Note: this is not the Python package `'samplerate'` but the native code library `'libsamplerate'`
