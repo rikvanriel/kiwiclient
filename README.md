@@ -23,14 +23,16 @@ Follow these steps. Ask on the Kiwi forum if you have problems: `'forum.kiwisdr.
 Note: this is not the Python package `'samplerate'` but the native code library `'libsamplerate'`
 (e.g. x86\_64 or arm64).
     * Windows: download from `'github.com/libsndfile/libsamplerate/releases'`
-    * Linux: use a package manager, e.g. `'apt install libsamplerate'`
+    * Linux: use a package manager, e.g. `'apt install libsamplerate'` or `'libsamplerate0'`
     * macOS: use a package manager like brew: `'brew install libsamplerate'`
 * Run the samplerate module builder `'make samplerate_build'`.
 This generates a Python wrapper around `'libsamplerate'` in the file `'samplerate/_src.py'`
 * Test by running `'make samplerate_test'`
 
 If you can't build the Kiwi version then install the regular Python package: `'pip3 install samplerate'`  
-If the either samplerate module is not found then low-quality resampling based on linear interpolation is used.
+If either samplerate module is not found then low-quality resampling based on linear interpolation is used.  
+A message indicating which resampler is being used will be shown.  
+Set the environment variable `'USE_LIBSAMPLERATE'` to '`False'` to force the linear interpolator to be used.
 
 ## Demo code
 
@@ -71,7 +73,7 @@ It provides the following methods which can be used in derived classes:
 * Can record audio data, IQ samples, and waterfall data.
 * The complete list of options can be obtained by `python3 kiwirecorder.py --help`.
 * It is possible to record from more than one KiwiSDR simultaneously, see again `--help`.
-* For recording IQ samples there is the `-w` or `--kiwi-wav` option: this writes	a .wav file which includes GNSS	timestamps (see below).
+* For recording IQ samples there is the `-w` or `--kiwi-wav` option: this writes a .wav file which includes GNSS timestamps (see below).
 * AGC options can be specified in a YAML-formatted file, `--agc-yaml` option, see `default_agc.yaml`. Note that this option needs PyYAML to be installed
 
 ## IQ .wav files with GNSS timestamps
