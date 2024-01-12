@@ -992,7 +992,7 @@ def main():
     parser.destroy()
 
     if options.krec_version:
-        print('kiwirecorder v1.2')
+        print('kiwirecorder v1.3')
         sys.exit()
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'

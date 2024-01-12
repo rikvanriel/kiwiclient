@@ -517,6 +517,9 @@ endif
 rsync_bit:
 	$(RSYNC) $(RSYNC_ARGS)
 
+version ver v:
+	$(KREC) --version
+
 help h:
 	@echo HOST = $(HOST)
 	@echo PORT = $(PORT)
