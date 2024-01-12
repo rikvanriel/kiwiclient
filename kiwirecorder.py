@@ -49,11 +49,12 @@ def by_dBm(e):
     return e['dBm']
 
 def _write_wav_header(fp, filesize, samplerate, num_channels, is_kiwi_wav):
+    samplerate = int(samplerate+0.5);
     fp.write(struct.pack('<4sI4s', b'RIFF', filesize - 8, b'WAVE'))
     bits_per_sample = 16
     byte_rate       = samplerate * num_channels * bits_per_sample // 8
     block_align     = num_channels * bits_per_sample // 8
-    fp.write(struct.pack('<4sIHHIIHH', b'fmt ', 16, 1, num_channels, int(samplerate+0.5), byte_rate, block_align, bits_per_sample))
+    fp.write(struct.pack('<4sIHHIIHH', b'fmt ', 16, 1, num_channels, samplerate, byte_rate, block_align, bits_per_sample))
     if not is_kiwi_wav:
         fp.write(struct.pack('<4sI', b'data', filesize - 12 - 8 - 16 - 8))
 
@@ -372,7 +373,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
             # fp.tell() sometimes returns zero. _write_wav_header writes filesize - 8
             if filesize >= 8:
-                _write_wav_header(fp, filesize, int(self._output_sample_rate), self._num_channels, self._options.is_kiwi_wav)
+                _write_wav_header(fp, filesize, self._output_sample_rate, self._num_channels, self._options.is_kiwi_wav)
 
     def _write_samples(self, samples, *args):
         """Output to a file on the disk."""
@@ -384,7 +385,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
             self._start_time = time.time()
             # Write a static WAV header
             with open(self._get_output_filename(), 'wb') as fp:
-                _write_wav_header(fp, 100, int(self._output_sample_rate), self._num_channels, self._options.is_kiwi_wav)
+                _write_wav_header(fp, 100, self._output_sample_rate, self._num_channels, self._options.is_kiwi_wav)
             if self._options.is_kiwi_tdoa:
                 # NB for TDoA support: MUST be a print (i.e. not a logging.info)
                 print("file=%d %s" % (self._options.idx, self._get_output_filename()))
