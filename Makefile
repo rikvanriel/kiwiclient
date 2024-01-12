@@ -29,7 +29,7 @@ else
     MODE_PB = $(KIWI_MODE_PB)
 endif
 
-KREC = $(PY) kiwirecorder.py
+KREC = $(PY) -u kiwirecorder.py
 
 HP = -s $(HOST) -p $(PORT)
 H2 = -s $(HOST),$(HOST) -p $(PORT)
@@ -136,9 +136,9 @@ drm-1044:
 drm-9620:
 #	$(KREC) $(DRM) -s emeraldsdr.ddns.net -f 9620 --filename=AIR.9620.12k.iq --mode=iq --tlimit=10 --log-level=info
 #	$(KREC) $(DRM) -s emeraldsdr.ddns.net -f 9620 --filename=AIR.9620.12k.drm --ext=DRM --snd --s-meter=0 --sdt-sec=1 --tlimit=30 --log-level=info --ts
-	python3 kiwirecorder.py -s emeraldsdr.ddns.net  -p 8073 -f 9620 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=AIR.9620.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
+	$(KREC) -s emeraldsdr.ddns.net  -p 8073 -f 9620 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=AIR.9620.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
 drm-5910:
-	python3 kiwirecorder.py -s df0twn.dnsuser.de  -p 8073 -f 5910 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=RRI.5910.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
+	$(KREC) -s df0twn.dnsuser.de  -p 8073 -f 5910 -L -5000 -H 5000 --mode=drm --ext=DRM --snd --user=DRM-test --filename=RRI.5910.12k.drm --s-meter=0 --sdt-sec=1 --tlimit=30 --timestamp --log-level=info
 
 drm-bug:
 #	$(KREC) $(DRM) --tlimit=40 --test-mode --snd --wf --z 5
@@ -261,9 +261,41 @@ smsi:
 
 
 # TDoA debugging
+H_TDOA = $(HP)
+
+# Kiwi-2 v1.653
+#H_TDOA = -s wessex.zapto.org -p 8074
+
+# Kiwi-1 v1.646
+#H_TDOA = -s kiwisdr.oh6ai.fi -p 8073
+
+# Kiwi-1 v1.633 3ch
+#H_TDOA = -s wessex.hopto.org -p 8075
+
+F_TDOA = -f 77.5 -m iq -L 500 -H 500 --kiwi-wav --kiwi-tdoa -u TDoA_service
 
 tdoa:
-	$(PY) -u kiwirecorder.py $(HP) $(F_PB) -m iq --kiwi-wav --kiwi-tdoa --tlimit=30 -u TDoA_service --log-level=debug --nolocal
+	$(KREC) $(H_TDOA) $(F_TDOA) --tlimit=60 --log-level=debug
+#	$(KREC) $(H_TDOA) $(F_TDOA) --tlimit=30 --log-level=debug --devel=0:1.005e-6,1:0
+#	$(KREC) --quiet $(F_TDOA) -s kiwisdr.ddnss.de,91.8.102.123,kiwisdr.inf.dhbw-ravensburg.de -p 8073,8073,8073 --station=DL6ECS,DE1LON,DK0TE-JN47rp --tlimit=30 --log-level=info
+
+
+# check an iq .wav file recorded with --kiwi-wav
+# make wav f=*.wav
+wav:
+	$(PY) kiwi/wavreader.py $(f)
+
+
+# check an iq .wav file recorded with --kiwi-wav
+# make wav f=*.wav
+proc: oct/read_kiwi_iq_wav.oct
+	octave-cli --eval "proc_kiwi_iq_wav('$(f)',255)"
+
+install: oct/read_kiwi_iq_wav.oct
+
+oct/%.oct: src/%.cc
+	@mkdir -p oct
+	cd oct && mkoctfile -I../include ../$<
 
 
 # test reported problem situations
@@ -271,6 +303,12 @@ tdoa:
 T_MODE = -m usb --ncomp     # "no compression" mode used by wsprdaemon.sh
 #T_MODE = -m iq
 T_PARAMS = -q --log-level=info $(HP) -u test -f 28124.6 $M -L 1200 -H 1700 --test-mode $(T_MODE)
+H = $(HOST)
+
+flood:
+	while [ true ] ; do \
+	    $(KREC) -s $H,$H,$H,$H,$H,$H,$H,$H -f 10000 -m usb -L 1200 -H 1700 --test-mode --tlimit=1 || true ; \
+	done; true
 
 slots1:
 	$(KREC) --station=1 $(T_PARAMS) &
@@ -483,6 +521,7 @@ help h:
 	@echo HOST = $(HOST)
 	@echo PORT = $(PORT)
 	@echo FREQ = $(FREQ)
+	@echo MODE_PB = $(MODE_PB)
 	@echo
 	$(KREC) --help
 
@@ -490,5 +529,5 @@ clean:
 	-rm -f *.log *.wav *.png *.txt *.npy
 
 clean_dist: clean
-	-rm -f *.pyc */*.pyc
+	-rm -f *.pyc */*.pyc oct/*.oct
 	-rm -rf __pycache__ */__pycache__

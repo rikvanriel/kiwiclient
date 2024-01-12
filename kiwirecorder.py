@@ -93,6 +93,7 @@ class GNSSPerformance(object):
         if gps['last_gps_solution'] == 0 and self._last_solution != 0:
             ts = gps['gpssec'] + 1e-9 * gps['gpsnsec']
             msg_gnss_drift = ''
+            dt = 0
             if self._last_ts != -1:
                 dt = ts - self._last_ts
                 if dt < -12*3600*7:
@@ -105,8 +106,8 @@ class GNSSPerformance(object):
                     mean_num_frames   = self._buffer_num_frames.applyFn(np.mean)
                     msg_gnss_drift = 'std(clk drift)= %5.1f m' % (3e8 * std_dt_per_frame * mean_num_frames)
 
-            logging.info('%s: (%2d,%3d) t_gnss= %16.9f %s'
-                         % (filename, self._last_solution, self._num_frames, ts, msg_gnss_drift))
+            logging.info('%s: (%2d,%3d) t_gnss= %16.9f dt= %16.9f %s'
+                         % (filename, self._last_solution, self._num_frames, ts, dt, msg_gnss_drift))
             self._num_frames = 0
             self._last_ts    = ts
 
@@ -228,6 +229,17 @@ class KiwiSoundRecorder(KiwiSDRStream):
 
         if self._options.resample > 0 and not HAS_RESAMPLER:
             self._setup_resampler()
+
+        if self._options.devel is not None:
+            for pair in self._options.devel.split(','):
+                vals = pair.split(':')
+                if len(vals) != 2:
+                    raise Exception("--devel arg \"%s\" needs to be format \"[0-7]:float_value\"" % pair)
+                which = int(vals[0])
+                value = float(vals[1])
+                if not (0 <= which <= 7):
+                    raise Exception("--devel first arg \"%d\" of \"[0-7]:float_value\" is out of range" % which)
+                self._send_message('SET devl.p%d=%.9g' % (which, value))
 
     def _setup_resampler(self):
         if self._options.resample > 0:
@@ -964,6 +976,10 @@ def main():
                       dest='no_api',
                       action='store_true', default=False,
                       help='Simulate connection to Kiwi using improper/incomplete API')
+    group.add_option('--devel',
+                      dest='devel',
+                      type='string', default=None,
+                      help='Set development parameters p0-p7 to float value. Format: [0-7]:float_value, ...')
     parser.add_option_group(group)
 
     opts_no_defaults = optparse.Values()
