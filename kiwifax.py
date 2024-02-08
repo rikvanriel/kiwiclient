@@ -214,7 +214,7 @@ class Interpolator:
             self._buffer.append(float(x))
     def __iter__(self):
         return self
-    def next(self):
+    def __next__(self):
         t_int = math.trunc(self._t)
         t_frac = self._t - t_int
         if t_int + 3 >= len(self._buffer):
@@ -441,7 +441,7 @@ class KiwiFax(KiwiSDRStream):
         # Window size defines the overall size of the window
         # Window shift defines how many samples are discarded after each iteration
         # This allows for overlapping FFTs thus increasing temporal resolution
-        window_shift = self._ss_window_size / 2
+        window_shift = self._ss_window_size // 2
         while len(self._startstop_buffer) >= self._ss_window_size:
             window = self._startstop_buffer[:self._ss_window_size]
             self._startstop_buffer = self._startstop_buffer[window_shift:]
