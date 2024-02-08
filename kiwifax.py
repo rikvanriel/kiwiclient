@@ -646,7 +646,7 @@ KNOWN_CORRECTION_FACTORS = {
 }
 
 def main():
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
+    #sys.stdout = codecs.getwriter('utf-8')(sys.stdout)
 
     parser = OptionParser()
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
