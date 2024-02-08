@@ -472,10 +472,11 @@ micro:
 
 # stream a Kiwi connection in a "netcat" style fashion
 
+H_NC = $(HP)
 nc:
-#	$(PY) kiwi_nc.py $(HP) $(F_PB) -m am --progress --log_level info --tlimit=3
-#	$(PY) kiwi_nc.py -s www -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
-	$(PY) kiwi_nc.py -s www -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
+#	$(PY) kiwi_nc.py $(H_NC) $(F_PB) -m am --progress --log_level info --tlimit=3
+#	$(PY) kiwi_nc.py $(H_NC) -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
+	$(PY) kiwi_nc.py $(H_NC) -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
 
 # Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
 # since dumphfdl does its own filtering. However the Kiwi HFDL extension does have it so you
