@@ -310,6 +310,7 @@ class KiwiFax(KiwiSDRStream):
         self._reader = True
         self._options.idx = 0
         self._type = 'SND'
+        self._start_time = time.time()
 
         self._ioc = options.ioc
         self._lpm = options.lpm
