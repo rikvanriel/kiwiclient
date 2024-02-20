@@ -213,6 +213,8 @@ samplerate_build:
 	$(PY) samplerate/samplerate_build.py
 samplerate_test:
 	pytest --capture=tee-sys samplerate/tests/test_samplerate.py
+samplerate_test2:
+	$(PY) -m pytest --capture=tee-sys samplerate/tests/test_samplerate.py
 info:
 	sox --info *.wav
 
