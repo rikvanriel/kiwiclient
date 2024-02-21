@@ -284,7 +284,7 @@ def main():
     parser.add_option('-m', '--modulation',
                       dest='modulation',
                       type='string', default='am',
-                      help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
+                      help='Modulation; one of am/amn/amw, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm/nnfm, iq (default passband if -L/-H not specified)')
     parser.add_option('--ncomp', '--no_compression',
                       dest='compression',
                       default=True,

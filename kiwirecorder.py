@@ -181,7 +181,7 @@ class KiwiSoundRecorder(KiwiSDRStream):
         mod    = self._options.modulation
         lp_cut = self._options.lp_cut
         hp_cut = self._options.hp_cut
-        if mod == 'am' or mod == 'amn':
+        if mod == 'am' or mod == 'amn' or mod == 'amw':
             # For AM, ignore the low pass filter cutoff
             lp_cut = -hp_cut if hp_cut is not None else hp_cut
         self.set_mod(mod, lp_cut, hp_cut, self._freq)
@@ -821,7 +821,7 @@ def main():
     group.add_option('-m', '--mode', '--modulation',
                       dest='modulation',
                       type='string', default='am',
-                      help='Modulation; one of am/amn, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm, iq (default passband if -L/-H not specified)')
+                      help='Modulation; one of am/amn/amw, sam/sau/sal/sas/qam, lsb/lsn, usb/usn, cw/cwn, nbfm/nnfm, iq (default passband if -L/-H not specified)')
     group.add_option('--ncomp', '--no_compression', '--no_compression',
                       dest='compression',
                       action='store_false', default=True,

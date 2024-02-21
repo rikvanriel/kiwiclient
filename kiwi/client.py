@@ -220,6 +220,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._default_passbands = {
             "am":  [ -4900, 4900 ],
             "amn": [ -2500, 2500 ],
+            "amw": [ -6000, 6000 ],
             "sam": [ -4900, 4900 ],
             "sal": [ -4900,    0 ],
             "sau": [     0, 4900 ],
@@ -233,6 +234,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             "cw":  [   300,  700 ],
             "cwn": [   470,  530 ],
             "nbfm":[ -6000, 6000 ],
+            "nnfm":[ -3000, 3000 ],
             "iq":  [ -5000, 5000 ]
         }
 
