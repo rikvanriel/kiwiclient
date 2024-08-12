@@ -542,10 +542,11 @@ tun:
 	$(KREC) --nc $(HP) --log debug --admin </tmp/si >/tmp/so
 
 
-# test connect timeout/retries
-TO_HOST = -s vr2bg.proxy.kiwisdr.com -p 8073 --busy-timeout=2 --busy-retries=3
-to:
-	$(KREC) $(TO_HOST) -m am -f 10000 
+# test connect/busy timeout/retries
+cto:
+	$(KREC) -s 1.2.3.4 -m am -f 10000  --socket-timeout 1 --connect-timeout=1 --connect-retries=5
+bto:
+	$(KREC) -s vr2bg.proxy.kiwisdr.com -m am -f 10000  --busy-timeout=2 --busy-retries=3
 
 
 # for copying to remote hosts
