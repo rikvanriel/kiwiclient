@@ -203,6 +203,7 @@ def main():
     opt.ADC_OV = None
     opt.freq_pbc = None
     opt.wf_cal = None
+    opt.wideband = False
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
     logging.basicConfig(level=logging.getLevelName(opt.log_level.upper()), format=FORMAT)

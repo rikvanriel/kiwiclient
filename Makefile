@@ -177,7 +177,8 @@ two:
 # Should playback using standard .wav file player
 
 real:
-	$(KREC) $(HP) $(F_PB) --tlimit=10
+	$(KREC) $(HP) $(F_PB) --tlimit=10 --log-level=debug
+#	$(KREC) $(HP_WESSEX) $(F_PB) --tlimit=10 --log-level=debug
 lsb:
 	$(KREC) $(HP) -f 7200 -m lsb --tlimit=10 --log-level=debug
 ncomp:
@@ -202,6 +203,34 @@ modes:
 	$(KREC) $(HP) -m qam --tlimit=4 --log_level debug
 
 
+# wideband
+HP_WESSEX = -s wessex.zapto.org -p 8074
+wbr:
+	@rm -f *.wav
+	$(KREC) $(HP)    -f 10000 -m iq --ncomp --station=wb --tlimit=30 --log_level debug --nolocal
+
+wb:
+	@rm -f *.wav
+	$(KREC) $(HP)    -f 10000 -m iq --ncomp --station=wb --tlimit=1000 --log_level debug --wb
+
+wbw:
+	@rm -f *.wav
+	$(KREC) $(HP_WESSEX) -f 14035 -m iq --ncomp --station=wb --tlimit=10 --log_level debug --wb
+
+ncwb:
+	@rm -f *.wav
+	$(KREC) --nc $(HP) -m iq -L 6000 -H 6000 -f 10000 --nc-wav --nc-srate 12000 --tlimit=10 --log=debug >nc.wav
+#	$(KREC) --nc $(HP) -m iq -L 6000 -H 6000 -f 10000 --nc-wav --nc-srate 72000 --tlimit=10 --log=debug >nc.wav
+
+ncw:
+	@rm -f *.wav
+#	@mkfifo pipe.wav
+#	$(KREC) $(HP_WESSEX) --nc -m iq -f 14035 --nc-wav --tlimit=10 --log=debug --wb >nc.wav
+
+ncwp:
+	$(KREC) $(HP_WESSEX) --nc -m iq -f 14035 --nc-wav --tlimit=10 --log=debug --wb >pipe.wav
+
+
 # resampling
 resample:
 	$(KREC) $(HP) $(F_PB) -r 12000 --tlimit=5
@@ -220,14 +249,15 @@ info:
 
 
 # frequency offset
-FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
+FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --wf-png --wf-auto --log=debug
+#FOFF = -L 470 -H 530 -m cwn --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
 #FOFF = -L 470 -H 530 -m cwn
 #FOFF = -L -100 -H 100 -m iq --snd --wf --z 14 --speed 2 --quiet --wf-png --wf-auto
 
 foff:
-	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 24000.14 $(FOFF)
+#	$(KREC) $(HP) --tlimit=10 --log_level=debug -f 24000.14 $(FOFF)
 #	$(KREC) $(HP) --tlimit=10 -f 124000.14 $(FOFF)
-#	$(KREC) $(HP) --tlimit=10  -f 124000.64 -o 100000 $(FOFF)
+	$(KREC) $(HP) --tlimit=60  -f 124000.64 -o 100000 $(FOFF)
 
 
 # S-meter
@@ -475,10 +505,19 @@ micro:
 # stream a Kiwi connection in a "netcat" style fashion
 
 H_NC = $(HP)
+#H_NC = $(HP_WESSEX)
+
 nc:
-#	$(PY) kiwi_nc.py $(H_NC) $(F_PB) -m am --progress --log_level info --tlimit=3
-#	$(PY) kiwi_nc.py $(H_NC) -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
-	$(PY) kiwi_nc.py $(H_NC) -m iq -f $(HFDL_FREQ) --agc-decay 100 --progress --tlimit=3 --log=debug
+#	$(KREC) --nc $(H_NC) $(F_PB) -m am --progress --log_level info --tlimit=3
+#	$(KREC) --nc $(H_NC) -m iq -f $(HFDL_FREQ) --agc-yaml fast_agc.yaml --progress --tlimit=3 --log=debug
+	$(KREC) --nc $(H_NC) -m usb -f $(HFDL_FREQ) --progress --tlimit=25 --log=debug --nolocal
+#	$(KREC) --nc $(H_NC) -m usb -f $(HFDL_FREQ) --progress --tlimit=25 --log=debug --nolocal
+#	$(KREC) --nc $(H_NC) -m usb -f $(HFDL_FREQ) --progress --tlimit=25 --log=debug --nolocal -u foo
+#	$(KREC) --nc $(H_NC) -m cw -f $(HFDL_FREQ) --progress --tlimit=3 --log=debug --waterfall
+
+kr_nc:
+	$(KREC) --nc $(H_NC) -m cw -f $(HFDL_FREQ) --progress --tlimit=3 --log=debug
+#	$(KREC) --nc $(H_NC) -m cw -f $(HFDL_FREQ) --progress --tlimit=3 --log=debug --waterfall -z 7
 
 # Use of an HFDL-optimized passband (e.g. "-L 300 -H 2600") is not necessary here
 # since dumphfdl does its own filtering. However the Kiwi HFDL extension does have it so you
@@ -487,12 +526,12 @@ HFDL_HOST = -s stucapon.plus.com -p 8073
 HFDL_FREQ = 5720
 
 dumphfdl:
-	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-decay 100 | \
+	$(KREC) --nc $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl | \
 	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
 	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
 
 dumphfdl_agc_yaml:
-	$(PY) kiwi_nc.py $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-yaml fast_agc.yaml | \
+	$(KREC) --nc $(HFDL_HOST) -m iq -f $(HFDL_FREQ) --user kiwi_nc:dumphfdl --agc-yaml fast_agc.yaml | \
 	dumphfdl --iq-file - --sample-rate 12000 --sample-format CS16 --read-buffer-size 9600 \
 	--centerfreq $(HFDL_FREQ) $(HFDL_FREQ)
 
@@ -500,7 +539,14 @@ tun:
 	mkfifo /tmp/si /tmp/so
 	nc -l localhost 1234 >/tmp/si </tmp/so &
 	ssh -f -4 -p 1234 -L 2345:localhost:8073 root@$(HOST) sleep 600 &
-	$(PY) kiwi_nc.py $(HP) --log debug --admin </tmp/si >/tmp/so
+	$(KREC) --nc $(HP) --log debug --admin </tmp/si >/tmp/so
+
+
+# test connect timeout/retries
+TO_HOST = -s vr2bg.proxy.kiwisdr.com -p 8073 --busy-timeout=2 --busy-retries=3
+to:
+	$(KREC) $(TO_HOST) -m am -f 10000 
+
 
 # for copying to remote hosts
 EXCLUDE_RSYNC = ".DS_Store" ".git" "__pycache__" "*.pyc" "*.wav" "*.png"

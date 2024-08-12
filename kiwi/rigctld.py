@@ -177,15 +177,15 @@ class Rigctld(object):
             except:
                 pass
             return "RPRT 0\n"
-        elif command.startswith('\chk_vfo'):
+        elif command.startswith('chk_vfo'):
             return "0\n"
-        elif command.startswith('\get_lock_mode'):
+        elif command.startswith('get_lock_mode'):
             # unlocked
             return "2\n"
-        elif command.startswith('\get_powerstat'):
+        elif command.startswith('get_powerstat'):
             # always report that power is on
             return "1\n"
-        elif command.startswith('\dump_state'):
+        elif command.startswith('dump_state'):
             return self._dump_state()
         elif command.startswith('f'):
             # get frequency

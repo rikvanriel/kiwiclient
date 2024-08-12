@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 ## -*- python -*-
 
+##
+## FIXME:
+## netcat should support the usual suspects:
+##      IQ-swap, endian-reversal, option to include GPS data, ...
+##
+
 import array, logging, os, struct, sys, time, copy, threading, os
 import gc
 import math
@@ -49,7 +55,7 @@ def by_dBm(e):
     return e['dBm']
 
 def _write_wav_header(fp, filesize, samplerate, num_channels, is_kiwi_wav):
-    samplerate = int(samplerate+0.5);
+    samplerate = int(samplerate+0.5)
     fp.write(struct.pack('<4sI4s', b'RIFF', filesize - 8, b'WAVE'))
     bits_per_sample = 16
     byte_rate       = samplerate * num_channels * bits_per_sample // 8
@@ -157,6 +163,8 @@ class Squelch(object):
             return False
         return is_open
 
+## -------------------------------------------------------------------------------------------------
+
 class KiwiSoundRecorder(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiSoundRecorder, self).__init__()
@@ -175,16 +183,6 @@ class KiwiSoundRecorder(KiwiSDRStream):
         self._resampler = None
         self._kiwi_samplerate = False
         self._gnss_performance = GNSSPerformance()
-
-    def set_freq(self, freq):
-        self._freq = freq
-        mod    = self._options.modulation
-        lp_cut = self._options.lp_cut
-        hp_cut = self._options.hp_cut
-        if mod == 'am' or mod == 'amn' or mod == 'amw':
-            # For AM, ignore the low pass filter cutoff
-            lp_cut = -hp_cut if hp_cut is not None else hp_cut
-        self.set_mod(mod, lp_cut, hp_cut, self._freq)
 
     def _setup_rx_params(self):
         if self._options.no_api:
@@ -422,6 +420,8 @@ class KiwiSoundRecorder(KiwiSDRStream):
                            self._options.server_host,
                            self._options.server_port))
 
+## -------------------------------------------------------------------------------------------------
+
 class KiwiWaterfallRecorder(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiWaterfallRecorder, self).__init__()
@@ -584,6 +584,8 @@ class KiwiWaterfallRecorder(KiwiSDRStream):
                 except KeyboardInterrupt:
                     pass
 
+## -------------------------------------------------------------------------------------------------
+
 class KiwiExtensionRecorder(KiwiSDRStream):
     def __init__(self, options):
         super(KiwiExtensionRecorder, self).__init__()
@@ -628,6 +630,128 @@ class KiwiExtensionRecorder(KiwiSDRStream):
                 raise Exception("No DRM when Kiwi running other extensions or too many connections active")
         else:
             self._process_ext_msg(True, name, value)
+
+## -------------------------------------------------------------------------------------------------
+
+class KiwiNetcat(KiwiSDRStream):
+    def __init__(self, options, reader):
+        super(KiwiNetcat, self).__init__()
+        self._options = options
+        self._type = 'W/F' if options.waterfall is True else 'SND'
+        self._reader = reader
+        freq = options.frequency
+        #logging.info("%s:%s freq=%d" % (options.server_host, options.server_port, freq))
+        self._freq = freq
+        self._freq_offset = options.freq_offset
+        self._start_ts = None
+        #self._start_time = None
+        self._start_time = time.time()
+        self._options.stats = None
+        self._squelch = Squelch(self._options) if options.sq_thresh is not None else None
+        self._last_gps = dict(zip(['last_gps_solution', 'dummy', 'gpssec', 'gpsnsec'], [0,0,0,0]))
+        self._fp_stdout = os.fdopen(sys.stdout.fileno(), 'wb')
+        self._first = True;
+
+    def _setup_rx_params(self):
+        user = self._options.user
+        if user == "kiwirecorder.py":
+            user = "kiwi_nc.py"
+        self.set_name(user)
+
+        if self._type == 'SND':
+            self.set_freq(self._freq)
+
+            if self._options.agc_gain != None: ## fixed gain (no AGC)
+                self.set_agc(on=False, gain=self._options.agc_gain)
+            elif self._options.agc_yaml_file != None: ## custon AGC parameters from YAML file
+                self.set_agc(**self._options.agc_yaml)
+            else: ## default is AGC ON (with default parameters)
+                self.set_agc(on=True)
+
+            if self._options.compression is False:
+                self._set_snd_comp(False)
+
+            if self._options.nb is True or self._options.nb_test is True:
+                gate = self._options.nb_gate
+                if gate < 100 or gate > 5000:
+                    gate = 100
+                nb_thresh = self._options.nb_thresh
+                if nb_thresh < 0 or nb_thresh > 100:
+                    nb_thresh = 50
+                self.set_noise_blanker(gate, nb_thresh)
+
+            if self._options.de_emp is True:
+                self.set_de_emp(1)
+
+        else:   # waterfall
+            self._set_maxdb_mindb(-10, -110)    # needed, but values don't matter
+            self._set_zoom_cf(0, 0)
+            self._set_wf_comp(False)
+            self._set_wf_speed(1)   # 1 Hz update
+
+    def _process_audio_samples_raw(self, seq, samples, rssi):
+        if self._options.progress is True:
+            sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
+            sys.stdout.flush()
+        else:
+            if self._squelch:
+                is_open = self._squelch.process(seq, rssi)
+                if not is_open:
+                    self._start_ts = None
+                    self._start_time = None
+                    return
+            self._write_samples(samples, {})
+
+    def _process_iq_samples_raw(self, seq, data):
+        if self._options.progress is True:
+            sys.stdout.write('\rBlock: %08x, RSSI: %6.1f' % (seq, rssi))
+            sys.stdout.flush()
+        else:
+            count = len(data) // 2
+            samples = np.ndarray(count, dtype='>h', buffer=data).astype(np.int16)
+            self._write_samples(samples, {})
+
+    def _process_waterfall_samples_raw(self, samples, seq):
+        if self._options.progress is True:
+            nbins = len(samples)
+            bins = nbins-1
+            max = -1
+            min = 256
+            bmax = bmin = 0
+            i = 0
+            for s in samples:
+                if s > max:
+                    max = s
+                    bmax = i
+                if s < min:
+                    min = s
+                    bmin = i
+                i += 1
+            span = 30000
+            sys.stdout.write('\rwf samples %d bins %d..%d dB %.1f..%.1f kHz rbw %d kHz'
+                  % (nbins, min-255, max-255, span*bmin/bins, span*bmax/bins, span/bins))
+            sys.stdout.flush()
+        else:
+            self._fp_stdout.write(samples)
+            self._fp_stdout.flush()
+
+    def _write_samples(self, samples, *args):
+        if self._options.progress is True:
+            return
+        if self._options.nc_wav and self._first == True:
+            _write_wav_header(self._fp_stdout, 0x7ffffff0, self._sample_rate, 2, False)
+            self._first = False
+        self._fp_stdout.write(samples)
+        self._fp_stdout.flush()
+
+    def _writer_message(self):
+        if self._options.writer_init == False:
+            self._options.writer_init = True
+            return 'init_msg'
+        msg = sys.stdin.readline()  # blocks
+        return msg
+
+## -------------------------------------------------------------------------------------------------
 
 def options_cross_product(options):
     """build a list of options according to the number of servers specified"""
@@ -771,14 +895,22 @@ def main():
                       dest='launch_delay',
                       type='int', default=0,
                       help='Delay (secs) in launching multiple connections')
-    parser.add_option('--connect-retries', '--connect_retries',
-                      dest='connect_retries',
-                      type='int', default=0,
-                      help='Number of retries when connecting to host (retries forever by default)')
     parser.add_option('--connect-timeout', '--connect_timeout',
                       dest='connect_timeout',
                       type='int', default=15,
                       help='Retry timeout(sec) connecting to host')
+    parser.add_option('--connect-retries', '--connect_retries',
+                      dest='connect_retries',
+                      type='int', default=0,
+                      help='Number of retries when connecting to host (retries forever by default)')
+    parser.add_option('--busy-timeout', '--busy_timeout',
+                      dest='busy_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) when host is busy')
+    parser.add_option('--busy-retries', '--busy_retries',
+                      dest='busy_retries',
+                      type='int', default=0,
+                      help='Number of retries when host is busy (retries forever by default)')
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
                       dest='socket_timeout',
                       type='int', default=10,
@@ -825,7 +957,7 @@ def main():
     group.add_option('--ncomp', '--no_compression', '--no_compression',
                       dest='compression',
                       action='store_false', default=True,
-                      help='Don\'t use audio compression')
+                      help='Don\'t use audio compression (IQ mode never uses compression)')
     group.add_option('-L', '--lp-cutoff',
                       dest='lp_cut',
                       type='float', default=None,
@@ -897,6 +1029,10 @@ def main():
                       dest='sound',
                       action='store_true', default=False,
                       help='Also process sound data when in waterfall or S-meter mode (sound connection options above apply)')
+    group.add_option('--wb', '--wideband',
+                      dest='wideband',
+                      action='store_true', default=False,
+                      help='Open a wideband connection to Kiwi (if supported)')
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "S-meter mode options", "")
@@ -911,7 +1047,7 @@ def main():
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "Waterfall connection options", "")
-    group.add_option('--wf',
+    group.add_option('--wf', '--waterfall',
                       dest='waterfall',
                       action='store_true', default=False,
                       help='Process waterfall data instead of audio. Center frequency set by audio option --f/--freq')
@@ -964,6 +1100,25 @@ def main():
                       help='Start extension in its test mode (if applicable)')
     parser.add_option_group(group)
 
+    group = OptionGroup(parser, "Netcat connection options", "")
+    group.add_option('--nc', '--netcat',
+                      dest='netcat',
+                      action='store_true', default=False,
+                      help='Open a netcat connection')
+    group.add_option('--nc-wav', '--nc_wav',
+                      dest='nc_wav',
+                      action='store_true', default=False,
+                      help='Format output as an continuous wav file stream')
+    group.add_option('--fdx',
+                      dest='fdx',
+                      action='store_true', default=False,
+                      help='Connection is full duplex (two-way)')
+    parser.add_option('--progress',
+                      dest='progress',
+                      action='store_true', default=False,
+                      help='Print progress messages instead of output of binary data')
+    parser.add_option_group(group)
+
     group = OptionGroup(parser, "KiwiSDR development options", "")
     group.add_option('--gc-stats',
                       dest='gc_stats',
@@ -992,7 +1147,7 @@ def main():
     parser.destroy()
 
     if options.krec_version:
-        print('kiwirecorder v1.3')
+        print('kiwirecorder v1.4')
         sys.exit()
 
     FORMAT = '%(asctime)-15s pid %(process)5d %(message)s'
@@ -1070,7 +1225,7 @@ def main():
             logging.fatal(e)
             return
 
-    options.raw = False
+    options.raw = True if options.netcat else False
     options.rigctl_enabled = False
     
     options.maxdb = clamp(options.maxdb, -170, -10)
@@ -1082,26 +1237,36 @@ def main():
     multiple_connections,options = options_cross_product(options)
 
     snd_recorders = []
-    if not gopt.waterfall or (gopt.waterfall and gopt.sound):
+    if not gopt.netcat and (not gopt.waterfall or (gopt.waterfall and gopt.sound)):
         for i,opt in enumerate(options):
             opt.multiple_connections = multiple_connections
             opt.idx = i
             snd_recorders.append(KiwiWorker(args=(KiwiSoundRecorder(opt),opt,run_event)))
 
     wf_recorders = []
-    if gopt.waterfall:
+    if not gopt.netcat and gopt.waterfall:
         for i,opt in enumerate(options):
             opt.multiple_connections = multiple_connections
             opt.idx = i
             wf_recorders.append(KiwiWorker(args=(KiwiWaterfallRecorder(opt),opt,run_event)))
 
     ext_recorders = []
-    if gopt.extension is not None:
+    if not gopt.netcat and (gopt.extension is not None):
         for i,opt in enumerate(options):
             opt.multiple_connections = multiple_connections
             opt.idx = i
             ext_recorders.append(KiwiWorker(args=(KiwiExtensionRecorder(opt),opt,run_event)))
 
+    nc_recorders = []
+    if gopt.netcat:
+        for i,opt in enumerate(options):
+            opt.multiple_connections = multiple_connections
+            opt.idx = 0
+            nc_recorders.append(KiwiWorker(args=(KiwiNetcat(opt, True),opt,run_event)))
+            if gopt.fdx:
+                opt.writer_init = False
+                opt.idx = 1
+                nc_recorders.append(KiwiWorker(args=(KiwiNetcat(opt, False),opt,run_event)))
     try:
         for i,r in enumerate(snd_recorders):
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
@@ -1111,29 +1276,36 @@ def main():
             logging.info("started sound recorder %d" % i)
 
         for i,r in enumerate(wf_recorders):
-            if i!=0 and options[i-1].server_host == options[i].server_host:
+            if i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
             logging.info("started waterfall recorder %d" % i)
 
         for i,r in enumerate(ext_recorders):
-            if i!=0 and options[i-1].server_host == options[i].server_host:
+            if i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             time.sleep(3)   # let snd/wf get established first
             r.start()
             logging.info("started extension recorder %d" % i)
+
+        for i,r in enumerate(nc_recorders):
+            if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
+                time.sleep(opt.launch_delay)
+            r.start()
+            #logging.info("started netcat recorder %d, timestamp=%d" % (i, options[i].ws_timestamp))
+            logging.info("started netcat recorder %d" % i)
 
         while run_event.is_set():
             time.sleep(.1)
 
     except KeyboardInterrupt:
         run_event.clear()
-        join_threads(snd_recorders, wf_recorders, ext_recorders)
+        join_threads(snd_recorders, wf_recorders, ext_recorders, nc_recorders)
         print("KeyboardInterrupt: threads successfully closed")
     except Exception as e:
         print_exc()
         run_event.clear()
-        join_threads(snd_recorders, wf_recorders, ext_recorders)
+        join_threads(snd_recorders, wf_recorders, ext_recorders, nc_recorders)
         print("Exception: threads successfully closed")
 
     if gopt.is_kiwi_tdoa:

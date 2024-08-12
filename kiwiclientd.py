@@ -518,6 +518,9 @@ def main():
     options.test_mode = False
     options.is_kiwi_wav = False
     options.is_kiwi_tdoa = False
+    options.wf_cal = None
+    options.wideband = False
+
     gopt = options
     multiple_connections,options = options_cross_product(options)
 

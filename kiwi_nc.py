@@ -344,6 +344,10 @@ def main():
                       default=False,
                       action='store_true',
                       help='Print garbage collection stats')
+    group.add_option('--nolocal',
+                      dest='nolocal',
+                      action='store_true', default=False,
+                      help='Make local network connections appear non-local')
     group.add_option('--admin',
                       dest='admin',
                       default=False, action='store_true',
@@ -386,10 +390,12 @@ def main():
     options.ADC_OV = None
     options.is_kiwi_tdoa = False
     options.no_api = False
-    options.nolocal = False
     options.connect_retries = 0
     options.connect_timeout = 3
     options.rigctl_enabled = False
+    options.wf_cal = None
+    options.wideband = False
+
     gopt = options
     multiple_connections,options = options_cross_product(options)
 
@@ -408,8 +414,8 @@ def main():
             if opt.launch_delay != 0 and i != 0 and options[i-1].server_host == options[i].server_host:
                 time.sleep(opt.launch_delay)
             r.start()
-            #logging.info("started sound recorder %d, timestamp=%d" % (i, options[i].ws_timestamp))
-            logging.info("started sound recorder %d" % i)
+            #logging.info("started netcat recorder %d, timestamp=%d" % (i, options[i].ws_timestamp))
+            logging.info("started netcat recorder %d" % i)
 
         while run_event.is_set():
             time.sleep(.1)

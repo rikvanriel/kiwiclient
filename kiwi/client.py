@@ -101,6 +101,8 @@ class KiwiDownError(KiwiError):
     pass
 class KiwiBadPasswordError(KiwiError):
     pass
+class KiwiNoMultipleConnectionsError(KiwiError):
+    pass
 class KiwiTimeLimitError(KiwiError):
     pass
 class KiwiServerTerminatedConnection(KiwiError):
@@ -149,7 +151,7 @@ class KiwiSDRStreamBase(object):
     def _prepare_stream(self, host, port, which):
         self._stream_name = which
         self._socket = socket.create_connection(address=(host, port), timeout=self._options.socket_timeout)
-        uri = '/%d/%s' % (self._options.ws_timestamp, which)
+        uri = '%s/%d/%s' % ('/wb' if self._options.wideband else '', self._options.ws_timestamp, which)
         handshake = ClientHandshakeProcessor(self._socket, host, port)
         handshake.handshake(uri)
 
@@ -248,6 +250,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _remove_freq_offset(self, freq):
         foffset = 0
         if hasattr(self, '_freq_offset'):   # in case called from app where it isn't defined
+            # logging.debug('#### freq_offset=%d kiwi_foff=%d' % (self._freq_offset, self._kiwi_foff))
             if (self._kiwi_foff != 0) and (self._freq_offset != 0) and (self._freq_offset != self._kiwi_foff):
                 s = "The Kiwi's configured frequency offset of %.3f kHz conflicts with -o option frequency offset of %.3f kHz" % (self._kiwi_foff, self._freq_offset)
                 raise Exception(s)
@@ -286,6 +289,16 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._lowcut = lc
         self._highcut = hc
         self._freq = freq
+
+    def set_freq(self, freq):
+        self._freq = freq
+        mod    = self._options.modulation
+        lp_cut = self._options.lp_cut
+        hp_cut = self._options.hp_cut
+        if mod == 'am' or mod == 'amn' or mod == 'amw':
+            # For AM, ignore the low pass filter cutoff
+            lp_cut = -hp_cut if hp_cut is not None else hp_cut
+        self.set_mod(mod, lp_cut, hp_cut, self._freq)
 
     def set_agc(self, on=False, hang=False, thresh=-100, slope=6, decay=1000, gain=50):
         logging.debug('set_agc: on=%s hang=%s thresh=%d slope=%d decay=%d gain=%d' % (on, hang, thresh, slope, decay, gain))
@@ -361,7 +374,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
         self._send_message('SET interp=%d' % interp)
     
     def _set_kiwi_version(self):
-        if self._options.idx != 0 or self._version_major is None or self._version_minor is None:
+        if self._version_major is None or self._version_minor is None:
             return
         self._kiwi_version = float(self._version_major) + float(self._version_minor) / 1000.
         logging.info("Kiwi server version: %d.%d" % (self._version_major, self._version_minor))
@@ -394,6 +407,8 @@ class KiwiSDRStream(KiwiSDRStreamBase):
             raise KiwiRedirectError(urllib.unquote(value))
         if name == 'badp' and value == '1':
             raise KiwiBadPasswordError('%s: bad password' % self._options.server_host)
+        if name == 'badp' and value == '5':
+            raise KiwiNoMultipleConnectionsError('%s: no multiple connections from the same IP address' % self._options.server_host)
         if name == 'down':
             raise KiwiDownError('%s: server is down atm' % self._options.server_host)
 
@@ -604,7 +619,7 @@ class KiwiSDRStream(KiwiSDRStreamBase):
     def _process_iq_samples(self, seq, samples, rssi, gps):
         pass
 
-    def _process_iq_samples(self, seq, data):
+    def _process_iq_samples_raw(self, seq, data):
         pass
 
     def _process_waterfall_samples(self, seq, samples):

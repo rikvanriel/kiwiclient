@@ -736,6 +736,8 @@ def main():
     options.S_meter = -1
     options.rigctl_enabled = False
     options.freq_pbc = None
+    options.wf_cal = None
+    options.wideband = False
 
     # Setup logging
     fmtr = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', '%Y%m%dT%H%MZ')
