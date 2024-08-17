@@ -1,9 +1,24 @@
+[updated 18 August 2024]
+
 # KiwiClient
 
 This is a Python client for KiwiSDR. It allows you to:
 
 * Receive data streams with audio samples, IQ samples, and waterfall data
 * Issue commands to the KiwiSDR
+
+## Install
+
+Visit [github.com/jks-prv/kiwiclient](https://github.com/jks-prv/kiwiclient)  
+Click the green `'Code'` button and select `'Download ZIP'`  
+You should find the file `'kiwiclient-master.zip'` in your download directory.  
+Copy it to the appropriate destination and unzip it if necessary.  
+Perhaps rename the resulting directory `'kiwiclient-master'` to just `'kiwiclient'`.  
+Change to that directory.  
+Here you will find a `'Makefile'` containing various usage examples.  
+Assuming your system has `'Make'` and `'Python3'` installed type `'make help'` to get started.  
+Or without `'Make'` type `'python3 kiwirecorder.py --help'`  
+It is also possible to use the `'git'` tools to checkout a kiwiclient clone that is easier to keep updated.  
 
 ## Dependencies
 
@@ -88,3 +103,5 @@ It provides the following methods which can be used in derived classes:
 ### Working with the recorded .wav files
 * There is an octave extension for reading such WAV files, see `read_kiwi_wav.cc` where the details of the non-standard WAV chunk can be found; it needs to be compiled in this way: `mkoctfile read_kiwi_wav.cc`.
 * For using read_kiwi_wav an octave function `proc_kiwi_iq_wav.m` is provided; type `help proc_kiwi_iq_wav` in octave for documentation.
+
+[end-of-document]
