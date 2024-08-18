@@ -228,9 +228,6 @@ def main():
                       default=False,
                       action='store_true',
                       help='Print progress messages instead of output of binary data')
-    parser.add_option('-k', '--socket-timeout', '--socket_timeout',
-                      dest='socket_timeout', type='int', default=10,
-                      help='Timeout(sec) for sockets')
     parser.add_option('-s', '--server-host',
                       dest='server_host', type='string',
                       default='localhost', help='Server host (can be a comma-delimited list)',
@@ -261,6 +258,25 @@ def main():
                       action='callback',
                       callback_args=(str,),
                       callback=get_comma_separated_args)
+    parser.add_option('--connect-timeout', '--connect_timeout',
+                      dest='connect_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) connecting to host')
+    parser.add_option('--connect-retries', '--connect_retries',
+                      dest='connect_retries',
+                      type='int', default=0,
+                      help='Number of retries when connecting to host (retries forever by default)')
+    parser.add_option('--busy-timeout', '--busy_timeout',
+                      dest='busy_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) when host is busy')
+    parser.add_option('--busy-retries', '--busy_retries',
+                      dest='busy_retries',
+                      type='int', default=0,
+                      help='Number of retries when host is busy (retries forever by default)')
+    parser.add_option('-k', '--socket-timeout', '--socket_timeout',
+                      dest='socket_timeout', type='int', default=10,
+                      help='Timeout(sec) for sockets')
     parser.add_option('--launch-delay', '--launch_delay',
                       dest='launch_delay',
                       type='int', default=0,
@@ -390,8 +406,6 @@ def main():
     options.ADC_OV = None
     options.is_kiwi_tdoa = False
     options.no_api = False
-    options.connect_retries = 0
-    options.connect_timeout = 3
     options.rigctl_enabled = False
     options.wf_cal = None
     options.wideband = False

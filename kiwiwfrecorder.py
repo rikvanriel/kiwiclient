@@ -164,6 +164,25 @@ def main():
     parser.add_option('--pw', '--password',
                       dest='password', type='string', default='',
                       help='Kiwi login password')
+    parser.add_option('--connect-timeout', '--connect_timeout',
+                      dest='connect_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) connecting to host')
+    parser.add_option('--connect-retries', '--connect_retries',
+                      dest='connect_retries',
+                      type='int', default=0,
+                      help='Number of retries when connecting to host (retries forever by default)')
+    parser.add_option('--busy-timeout', '--busy_timeout',
+                      dest='busy_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) when host is busy')
+    parser.add_option('--busy-retries', '--busy_retries',
+                      dest='busy_retries',
+                      type='int', default=0,
+                      help='Number of retries when host is busy (retries forever by default)')
+    parser.add_option('-k', '--socket-timeout', '--socket_timeout',
+                      dest='socket_timeout', type='int', default=10,
+                      help='Timeout(sec) for sockets')
     parser.add_option('--tlimit-pw', '--tlimit-password',
                       dest='tlimit_password', type='string', default='',
                       help='Connect time limit exemption password (if required)')
@@ -192,9 +211,6 @@ def main():
 
     opt.rigctl_enabled = False
     opt.is_kiwi_tdoa = False
-    opt.connect_retries = 3
-    opt.connect_timeout = 3
-    opt.socket_timeout = 10
     opt.tlimit = None
     opt.no_api = True
     opt.nolocal = False

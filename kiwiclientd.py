@@ -364,6 +364,14 @@ def main():
     parser.add_option('--connect-timeout', '--connect_timeout',
                       dest='connect_timeout', type='int', default=15,
                       help='Retry timeout(sec) connecting to host')
+    parser.add_option('--busy-timeout', '--busy_timeout',
+                      dest='busy_timeout',
+                      type='int', default=15,
+                      help='Retry timeout(sec) when host is busy')
+    parser.add_option('--busy-retries', '--busy_retries',
+                      dest='busy_retries',
+                      type='int', default=0,
+                      help='Number of retries when host is busy (retries forever by default)')
     parser.add_option('-k', '--socket-timeout', '--socket_timeout',
                       dest='socket_timeout', type='int', default=10,
                       help='Socket timeout(sec) during data transfers')
