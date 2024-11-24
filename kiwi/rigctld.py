@@ -108,8 +108,19 @@ class Rigctld(object):
     def _set_frequency(self, command):
         try:
             # hamlib freq is in Hz, kiwisdr in kHz
+            # format: F 1234.00000
             newfreq = command[2:]
             freq = float(newfreq) / 1000
+        except:
+            try:
+                # format: F VFOA 1234.00000
+                newfreq = command[7:]
+                freq = float(newfreq) / 1000
+            except:
+                print(f"could not decode frequency from {command}")
+                return "RPRT -1\n"
+
+        try:
             mod = self._kiwisdrstream.get_mod()
             lc = self._kiwisdrstream.get_lowcut()
             hc = self._kiwisdrstream.get_highcut()
