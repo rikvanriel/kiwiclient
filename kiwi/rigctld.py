@@ -168,6 +168,10 @@ class Rigctld(object):
         return message
 
     def _handle_command(self, sock, command):
+        # Remove leading '\' from command
+        if command.startswith("\\"):
+            command = command[1:]
+
         if command.startswith('q'):
             # quit
             try:
@@ -178,7 +182,7 @@ class Rigctld(object):
                 pass
             return "RPRT 0\n"
         elif command.startswith('chk_vfo'):
-            return "0\n"
+            return "CHKVFO 0\n"
         elif command.startswith('get_lock_mode'):
             # unlocked
             return "2\n"
